@@ -56,10 +56,10 @@ const TEXT = {
   date:[['お揃いアバターでデート',300,1],['記念日を祝った',800,0],['夜景ワールドで寝落ち通話',200,0],['ペアでフォトコンに入賞',900,1]]
 };
 
-// ゲーム内のお金の規模。数字を変えると全イベントの金額が一括で増減します（20＝数千円〜数万円規模）
-const MONEY_SCALE = 20;
+// ゲーム内のお金の規模。数字を変えると全イベントの金額が一括で増減します（1000＝開始300万円・1回の収入が数十万〜数百万円。20なら数万円規模）
+const MONEY_SCALE = 1000;
 const START_MONEY = 3000 * MONEY_SCALE;
-const COLORS = ['#ff8fb8', '#7fe3d0', '#ffd166', '#a99bff'];
+const COLORS = ['#ff9ec4', '#7cc4ff', '#ffd35c', '#9be08f']; // ピンク・水色・黄・緑（ログの名前バッジなどに使用）
 
 
 const DEFAULT_TURNS = 30; // ルーム作成者が変更可能（5〜99）
@@ -82,3 +82,15 @@ const ITEMS = {
   amulet:{icon:'🧿',name:'お守り',desc:'ピンチ・トラブルを1回無効(自動)'}
 };
 const ITEM_POOL = ['dice2','dice2','dice2','dice3','plane','train','ship','ship','bike','bike','amulet','amulet'];
+
+// ===== ステータスアイコンの説明（プレイヤー欄・凡例に表示）=====
+const BADGES = {
+  sugar:  { icon: '🍬', name: 'お砂糖', desc: '恋人。毎ターン収入が入る。2人以上（多糖）だと稼げるがバレるリスクも' },
+  live:   { icon: '🏠', name: '同棲', desc: 'お砂糖と同棲中。毎ターンの収入アップ' },
+  married:{ icon: '💍', name: '結婚', desc: '毎ターン家計の収入。多糖のまま結婚するとお砂糖が1人に絞られる' },
+  friends:{ icon: '👫', name: '友達', desc: 'お砂糖に変化することがある' },
+  exes:   { icon: '💔', name: '元お砂糖', desc: '遭遇イベで金を取られたり、復縁・和解することも' },
+  fame:   { icon: '⭐', name: '人気度', desc: '1つにつきイベ収入+10%（最大5）。終了時に加点' },
+  fbt:    { icon: '🕺', name: 'フルトラ', desc: '集会・イベ・DJなどの収入+30%' },
+  pc:     { icon: '💻', name: '高性能PC', desc: 'ピンチ・損失が半分になる' }
+};
