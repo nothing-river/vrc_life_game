@@ -11,10 +11,14 @@
 <section id="setup"></section>
 <main id="game" hidden>
   <div id="board"></div>
+  <aside id="panel"><div id="stat"></div><div id="msg"></div><div id="route"></div><div id="items"></div>
+    <div class="ctl"><div id="dice">🎲</div><button id="roll" class="big">サイコロを振る</button></div><ol id="log"></ol></aside>
 </main>
 <dialog id="result"></dialog>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="js/data.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/net.js"></script>
 <script src="js/game.js"></script>
 <script src="js/main.js"></script>
 </body>

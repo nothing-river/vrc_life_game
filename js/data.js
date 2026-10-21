@@ -1,11 +1,14 @@
 // ===== ボード定義 =====
+// ===== メインステージ：外周ループ＋3つの分かれ道（分岐→合流）=====
 const COLS = 14, ROWS = 9;
-const PATH = [];
+const PATH = [], NEXT = [], FORKS = {}, MERGES = new Set();
 for (let c = 0; c < COLS; c++) PATH.push([c, 0]);
 for (let r = 1; r < ROWS; r++) PATH.push([COLS - 1, r]);
 for (let c = COLS - 2; c >= 0; c--) PATH.push([c, ROWS - 1]);
 for (let r = ROWS - 2; r >= 1; r--) PATH.push([0, r]);
-const GOAL = PATH.length - 1; // 41
+const PN = PATH.length; // 外周42マス
+for (let i = 0; i < PN; i++) NEXT[i] = [(i + 1) % PN];
+const PREV = [];
 
 const TYPES = {
   start:{icon:'🚪',label:'ログイン'}, goal:{icon:'🏁',label:'ゴール'},
@@ -18,12 +21,30 @@ const TYPES = {
   trouble:{icon:'⚠️',label:'トラブル'}, gacha:{icon:'🎰',label:'ガチャ'},
   warp:{icon:'🌀',label:'ワープ'}, rest:{icon:'💤',label:'寝落ち'},
   collab:{icon:'🤝',label:'コラボ'}, social:{icon:'🍹',label:'交流'},
-  quiz:{icon:'❓',label:'クイズ'}
+  quiz:{icon:'❓',label:'クイズ'}, item:{icon:'🎁',label:'アイテム'},
+  ex:{icon:'💔',label:'元お砂糖'}, past:{icon:'🕵️',label:'お砂糖の過去'}, friend:{icon:'👫',label:'友達'},
+  offkai:{icon:'🍻',label:'オフ会'}, tata:{icon:'🌪️',label:'多糖・修羅場'}, sns:{icon:'📱',label:'SNS'}
 };
 
-const LAYOUT = ['start','world','pay','shukai','sugar','shop','loss','event','job','gacha','photo','shukai','date','trouble',
- 'dj','marry','pay','collab','warp','quiz','sugar','event','loss','job','social','shukai','rest','world','gacha','sugar',
- 'date','trouble','event','shop','marry','dj','photo','collab','job','warp','pay','goal'];
+const LAYOUT = ['start','world','pay','shukai','sugar','shop','friend','event','job','item','photo','shukai','date','trouble',
+ 'dj','marry','pay','collab','warp','quiz','sugar','offkai','loss','job','social','shukai','rest','world','gacha','past',
+ 'date','trouble','event','shop','ex','dj','photo','collab','job','warp','sns','item'];
+// 分かれ道：from=分岐マス / to=合流マス / cells=寄り道の座標 / types=各マスの種類 / opts=選択肢の名前（先頭は本道）
+const BRANCHES = [
+  { from: 38, to: 17, opts: ['外周を進む', '🌉近道ブリッジ（短縮・ドラマ多め）'],
+    cells: [...Array(12)].map((_, i) => [i + 1, 4]),
+    types: ['friend','ex','past','offkai','item','sugar','tata','event','sns','shukai','date','pay'] },
+  { from: 4, to: 7, opts: ['直進', '💎お宝の寄り道（稼げる）'],
+    cells: [[4,1],[4,2],[5,2],[6,2],[7,2],[7,1]], types: ['shukai','event','item','dj','photo','gacha'] },
+  { from: 24, to: 27, opts: ['直進', '🌙ラブ寄り道（恋愛イベ多め）'],
+    cells: [[10,7],[10,6],[9,6],[8,6],[7,6],[7,7]], types: ['date','sugar','sns','offkai','world','pay'] }
+];
+BRANCHES.forEach(b => {
+  let prev = b.from;
+  b.cells.forEach((xy, k) => { const id = PATH.length; PATH.push(xy); LAYOUT.push(b.types[k]); NEXT[id] = []; NEXT[prev].push(id); prev = id; });
+  NEXT[prev].push(b.to); FORKS[b.from] = b.opts; MERGES.add(b.to);
+});
+NEXT.forEach((ns, i) => ns.forEach(j => (PREV[j] = PREV[j] || []).push(i)));
 
 const TEXT = {
   pay:['ワールド売上が入った','アバター販売が好調','BOOTHで投げ銭をもらった','フレンドに奢ってもらった','お年玉イベで大量ゲット','衣装の受注制作が完売','Vket出展が大盛況','配信の投げ銭が止まらない'],
@@ -35,8 +56,29 @@ const TEXT = {
   date:[['お揃いアバターでデート',300,1],['記念日を祝った',800,0],['夜景ワールドで寝落ち通話',200,0],['ペアでフォトコンに入賞',900,1]]
 };
 
-const START_MONEY = 3000;
+// ゲーム内のお金の規模。数字を変えると全イベントの金額が一括で増減します（20＝数千円〜数万円規模）
+const MONEY_SCALE = 20;
+const START_MONEY = 3000 * MONEY_SCALE;
 const COLORS = ['#ff8fb8', '#7fe3d0', '#ffd166', '#a99bff'];
 
-// 全員がこのターン数を遊び終えると「ゴールゲート」が開き、全員ゴールへワープして終了
-const GATE_TURN = 30;
+
+const DEFAULT_TURNS = 30; // ルーム作成者が変更可能（5〜99）
+
+// ===== ゴールステージ（一本道・8列×3段の蛇行）=====
+const PATH2 = [];
+for (let r = 0; r < 3; r++) for (let c = 0; c < 8; c++) PATH2.push([r % 2 ? 7 - c : c, r]);
+const LAYOUT2 = ['start','world','pay','shukai','item','sugar','event','shop','gacha','dj','ex','date','photo','collab','item','trouble',
+ 'marry','event','tata','job','offkai','warp','pay','goal'];
+const GOAL_BONUS = [5000, 3000, 1500, 500]; // 基準額（add()でMONEY_SCALE倍される） // ゴール順ボーナス
+
+// ===== アイテム =====
+const ITEMS = {
+  dice2:{icon:'🎲🎲',name:'ダブルダイス',desc:'サイコロ2個'},
+  dice3:{icon:'🎲🎲🎲',name:'トリプルダイス',desc:'サイコロ3個'},
+  plane:{icon:'✈️',name:'飛行機',desc:'10マス進む'},
+  train:{icon:'🚄',name:'新幹線',desc:'8マス進む'},
+  ship:{icon:'🚢',name:'船',desc:'6マス進む'},
+  bike:{icon:'🛵',name:'バイク',desc:'出目+3'},
+  amulet:{icon:'🧿',name:'お守り',desc:'ピンチ・トラブルを1回無効(自動)'}
+};
+const ITEM_POOL = ['dice2','dice2','dice2','dice3','plane','train','ship','ship','bike','bike','amulet','amulet'];
