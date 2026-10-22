@@ -150,62 +150,80 @@ button:focus-visible,input:focus-visible,.ph:focus-within{outline:3px solid var(
 @media(max-width:1000px){#game{grid-template-columns:1fr;grid-template-areas:'turn' 'board' 'panel' 'log';grid-template-rows:auto}#panel,#logbox{position:static;max-height:none;height:auto}#log{max-height:20em;min-height:8em}#boardwrap{max-height:54vh}#turn{position:sticky;top:0;z-index:5}}
 
 
-
-/* ===== PC版：マップ全体をスクロールなしで表示 ===== */
-
+/* ===== PC版：4人プレイ基準で全体マップを画面内に収める ===== */
 @media (min-width: 1001px) {
   #game {
     height: 100vh;
+    max-height: 100vh;
     overflow: hidden;
     grid-template-rows: auto minmax(0, 1fr);
   }
 
+  /* マップの表示領域 */
   #boardwrap {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
     min-height: 0;
     max-height: none;
-    height: 100%;
     overflow: hidden;
   }
 
+  /* 通常マップ：14列 × 9行 */
   #board {
     width: 100%;
-    min-width: 0;
     height: 100%;
+    min-width: 0;
     min-height: 0;
     grid-template-columns: repeat(14, minmax(0, 1fr));
     grid-template-rows: repeat(9, minmax(0, 1fr));
-    gap: 3px;
+    gap: 2px;
   }
 
+  /* 4人分のアイコンが入ることを想定してマス内を調整 */
   #board .cell {
+    min-width: 0;
     min-height: 0;
-    padding: 2px 1px;
+    padding: 2px;
+    overflow: hidden;
   }
 
   #board .cell b {
-    font-size: clamp(0.7rem, 1.1vw, 1.2rem);
+    font-size: clamp(0.65rem, 0.9vw, 1rem);
   }
 
   #board .cell small {
-    font-size: clamp(0.5rem, 0.65vw, 0.75rem);
+    font-size: clamp(0.48rem, 0.55vw, 0.65rem);
+  }
+
+  #board .toks {
+    gap: 1px;
+    padding-top: 1px;
   }
 
   #board .toks .tok {
-    width: clamp(14px, 1.5vw, 26px);
+    width: clamp(12px, 1.15vw, 20px);
+    max-width: 100%;
+    border-width: 1px;
+    font-size: 0.6rem;
   }
 
-  /* ゴール用マップ */
+  /* ゴール用の全体マップも画面内に収める */
   #board.g {
+    width: 100%;
+    height: 100%;
     min-width: 0;
+    min-height: 0;
     grid-template-columns: repeat(8, minmax(0, 1fr));
     grid-template-rows: repeat(3, minmax(0, 1fr));
   }
 }
 
-/* スマートフォン・タブレットは従来どおり */
+/* スマートフォンは従来どおりスクロール可能 */
 @media (max-width: 1000px) {
   #game {
     height: auto;
+    max-height: none;
     overflow: visible;
   }
 
@@ -216,8 +234,9 @@ button:focus-visible,input:focus-visible,.ph:focus-within{outline:3px solid var(
   }
 
   #board {
-    min-width: 700px;
+    width: auto;
     height: auto;
+    min-width: 700px;
     grid-template-rows: repeat(9, minmax(52px, auto));
   }
 
