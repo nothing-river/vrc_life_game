@@ -10,9 +10,10 @@
 <body>
 <section id="setup"></section>
 <main id="game" hidden>
-  <div id="board"></div>
+  <div id="turn"></div>
+  <div id="boardwrap"><div id="board"></div></div>
   <aside id="panel">
-    <div id="msg"></div>
+    <div id="event"><div id="evh"></div><div id="msg"></div></div>
     <div class="ctl"><div id="dice">🎲</div><button id="roll" class="big">サイコロを振る</button></div>
     <div id="route"></div><div id="items"></div>
     <div id="stat"></div><div id="tip" hidden></div>

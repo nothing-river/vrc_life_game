@@ -87,7 +87,7 @@ function buildSetup(onStart) {
     const cc = [...el.querySelectorAll('.cwrap')].map((w, i) => colorCtl(w, COLORS[i]));
     el.querySelector('.back').onclick = menu;
     $('#go').onclick = () => onStart([...Array(n)].map((_, i) => ({
-      name: el.querySelectorAll('.nm')[i].value.trim() || `P${i + 1}`, img: photos[i], color: cc[i].get() || COLORS[i] })), clampTurns($('#tn').value), +$('#ex0').value);
+      name: el.querySelectorAll('.nm')[i].value.trim() || `P${i + 1}`, img: photos[i], color: cc[i].get() || COLORS[i] })), clampTurns($('#tn').value), $('#fog').checked);
     sync();
   };
   const online = isHost => {
@@ -132,20 +132,40 @@ function buildSetup(onStart) {
 }
 
 // ===== ボード描画 =====
+const isHid = i => !!(G.hid && G.hid.indexOf(i) >= 0);
+const cellClass = (i, lay, g) => `cell ${isHid(i) ? 't-fog fog' : 't-' + lay[i]}${g ? '' : `${FORKS[i] ? ' fork' : ''}${MERGES.has(i) ? ' merge' : ''}${i >= PN ? ' br' : ''}`}`;
+const cellInfo = (i, lay) => isHid(i) ? { icon: '❔', label: '？？？' } : TYPES[lay[i]];
 function renderBoard() {
   const g = G.stage === 'goal', path = g ? PATH2 : PATH, lay = g ? LAYOUT2 : LAYOUT;
   const bd = $('#board'); bd.className = g ? 'g' : '';
   bd.innerHTML = path.map(([x, y], i) => {
-    const t = lay[i], m = TYPES[t];
-    const cls = g ? '' : `${FORKS[i] ? ' fork' : ''}${MERGES.has(i) ? ' merge' : ''}${i >= PN ? ' br' : ''}`;
-    return `<div class="cell t-${t}${cls}" style="grid-column:${x + 1};grid-row:${y + 1}"><b>${m.icon}</b><small>${m.label}</small><div class="toks" id="c${i}"></div></div>`;
+    const m = cellInfo(i, lay);
+    return `<div class="${cellClass(i, lay, g)}" id="k${i}" style="grid-column:${x + 1};grid-row:${y + 1}"><b>${m.icon}</b><small>${m.label}</small><div class="toks" id="c${i}"></div></div>`;
   }).join('');
+}
+// 霧モード：公開されたマスだけ表示を更新
+function updateFog() {
+  if (typeof document.getElementById !== 'function') return;
+  const g = G.stage === 'goal', lay = g ? LAYOUT2 : LAYOUT;
+  lay.forEach((_, i) => {
+    const e = document.getElementById('k' + i); if (!e) return;
+    const m = cellInfo(i, lay); e.className = cellClass(i, lay, g);
+    e.querySelector('b').textContent = m.icon; e.querySelector('small').textContent = m.label;
+  });
+}
+// 盤面が横スクロールのとき（スマホ等）、手番のプレイヤーの駒が見える位置へ自動スクロール
+function followCurrent() {
+  if (typeof document.getElementById !== 'function') return;
+  const w = $('#boardwrap'), c = G.ps[G.t] && document.getElementById('c' + G.ps[G.t].pos);
+  if (!w || !c || !c.parentElement || !w.scrollTo) return;
+  const e = c.parentElement;
+  w.scrollTo({ left: e.offsetLeft - w.clientWidth / 2 + e.offsetWidth / 2, top: w.scrollHeight > w.clientHeight ? e.offsetTop - w.clientHeight / 2 + e.offsetHeight / 2 : 0, behavior: 'smooth' });
 }
 
 function renderTokens() {
   document.querySelectorAll('.toks').forEach(e => e.innerHTML = '');
   G.ps.forEach(p => $('#c' + p.pos).insertAdjacentHTML('beforeend', tok(p)));
-  Net.sync();
+  followCurrent(); Net.sync();
 }
 
 const chip = (b, suffix = '') => `<span class="chip" data-tip="${esc(b.name)}：${esc(b.desc)}" title="${esc(b.name)}：${esc(b.desc)}">${b.icon}${b.name}${suffix}</span>`;
@@ -167,7 +187,15 @@ function renderLegend() {
     + '<h4>アイテム（自分の番に使う）</h4>' + Object.values(ITEMS).map(i => `<p><b>${i.icon} ${i.name}</b>　${i.desc}</p>`).join('')
     + '<h4>マスの種類</h4><p class="sq">' + Object.values(TYPES).map(t => `${t.icon}${t.label}`).join('　') + '</p>';
 }
+function renderTurn() {
+  const cp = G.ps[G.t], n = G.ps.length, k = (G.order || []).indexOf(G.t) + 1, goal = G.stage === 'goal', left = G.turns - G.round;
+  const head1 = goal ? '<b class="big1">🏁 ゴールステージ</b><span>ゴールまで一本道！</span>'
+    : `<b class="big1">第 ${G.round} / ${G.turns} ターン</b><span>${left > 0 ? (left <= 5 ? `ゴールステージまであと${left}ターン` : `残り${left}ターン`) : '最終ターン！この後ゴールステージへ'}</span>`;
+  const bar = goal ? '' : `<div class="bar"><i style="width:${Math.min(100, (G.round - 1 + k / n) / G.turns * 100)}%"></i></div>`;
+  $('#turn').innerHTML = `<div class="t1">${head1}</div>${bar}<div class="t2" style="${cv(cp.color)}">${tok(cp)}<strong>${esc(cp.name)}</strong> の番<small>（手番 ${k}/${n}）</small></div>`;
+}
 function renderStat() {
+  renderTurn();
   $('#stat').innerHTML = (G.order || G.ps.map((_, i) => i)).map((si, k) => { const p = G.ps[si]; return `
     <div class="pc ${si === G.t ? 'now' : ''}" style="${cv(p.color)}"><div class="pt">${tok(p)}<div><strong><i class="ord">${k + 1}</i>${esc(p.name)}${p.done ? ' 🏁' + p.rank + '位' : ''}</strong>
     <span class="mny">${yen(p.money)}</span></div></div><div class="chips">${chips(p)}</div></div>`; }).join('');
@@ -178,7 +206,7 @@ function renderStat() {
 }
 const clampTurns = v => Math.max(5, Math.min(99, parseInt(v) || DEFAULT_TURNS));
 const turnsHtml = `<label class="tn">ターン数（メインステージ） <input id="tn" class="nm" type="number" min="5" max="99" value="${DEFAULT_TURNS}"> ターン</label>
-  <label class="tn">元お砂糖の設定 <select id="ex0" class="nm"><option value="0">なし（別れた人だけ元お砂糖になる）</option><option value="1">全員に過去のお砂糖が1人いる</option></select></label>`;
+  <label class="tn chk"><input type="checkbox" id="fog"> 🌫️ 霧モード（マスの一部が見えない。誰かが止まると公開）</label>`;
 
 // 名前は N(p) の目印で文章に埋め込み、表示時に「プレイヤー色のバッジ」(ログ) / 通常の文字(メッセージ) に変換する
 const N = p => `\u0001${G.ps.indexOf(p)}\u0002`;
@@ -186,7 +214,12 @@ const fmt = (t, html) => String(t).replace(/\u0001(\d+)\u0002/g, (_, i) => {
   const p = G.ps[+i]; if (!p) return '';
   return html ? `<b class="who" style="${cv(p.color)}"><i class="tok pi${+i}" style="${cv(p.color)}">${p.img ? '' : esc([...p.name][0])}</i>${esc(p.name)}</b>` : p.name;
 });
-const _log = t => $('#log').insertAdjacentHTML('afterbegin', `<li>${fmt(t, true)}</li>`);
+const _log = t => {
+  const ol = $('#log'); ol.insertAdjacentHTML('afterbegin', `<li${String(t).startsWith('▶') ? ' class="sep"' : ''}>${fmt(t, true)}</li>`);
+  while (ol.children && ol.children.length > 300) ol.lastChild.remove(); // 直近300件を保持（スクロールで過去ログを確認）
+};
+const _head = t => $('#evh').textContent = fmt(t, false);
+const head = t => { _head(t); Net.bc({ k: 'head', v: t }); };
 const _say = t => $('#msg').textContent = fmt(t, false);
 const log = t => { _log(t); Net.bc({ k: 'log', v: t }); };
 const say = t => { _say(t); Net.bc({ k: 'say', v: t }); };

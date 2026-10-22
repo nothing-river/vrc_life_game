@@ -5,11 +5,13 @@ const others = p => G.ps.filter(o => o !== p);
 const fame = (p, n) => p.fame = Math.max(0, Math.min(5, p.fame + n));
 const score = p => p.money + MONEY_SCALE * ((p.sugar ? 2000 + (p.sugar - 1) * 1000 : 0) + (p.live ? 1000 : 0) + (p.married ? 2000 : 0) + p.fame * 500);
 
-function initUI(ps, turns, ex0) {
+const makeHid = (n, goal) => [...Array(n).keys()].filter(i => i > 0 && !(goal && i === n - 1) && rnd(0, 1));
+function initUI(ps, turns, fog) {
   const order = ps.map((_, i) => i); // 手番の順番はランダム（入室順にしない）
   for (let i = order.length - 1; i > 0; i--) { const j = rnd(0, i); [order[i], order[j]] = [order[j], order[i]]; }
-  G = { order, oi: 0, ps: ps.map(p => ({ ...p, pos: 0, money: START_MONEY, sugar: 0, friends: 0, exes: ex0 | 0, live: false, married: false, fbt: false, pc: false, fame: 0, skip: 0, items: ['dice2'], done: false, rank: 0 })),
-    t: order[0], round: 1, turns: turns || DEFAULT_TURNS, stage: 'main', fin: 0, busy: false, over: false };
+  G = { order, oi: 0, ps: ps.map(p => ({ ...p, pos: 0, money: START_MONEY, sugar: 0, friends: 0, exes: 0, live: false, married: false, fbt: false, pc: false, fame: 0, skip: 0, items: ['dice2'], done: false, rank: 0 })),
+    t: order[0], round: 1, turns: turns || DEFAULT_TURNS, fog: !!fog, hid: null, stage: 'main', fin: 0, busy: false, over: false };
+  if (G.fog) G.hid = makeHid(LAYOUT.length, false);
   $('#setup').hidden = true; $('#game').hidden = false;
   $('#roll').onclick = () => onRoll(-1);
   $('#items').onclick = e => { const x = e.target.closest('button'); if (x && !x.disabled) onRoll(+x.dataset.i); };
@@ -21,19 +23,14 @@ function initUI(ps, turns, ex0) {
 function onPick(i) {
   if (!Net.on || Net.host) { if (G.choice && (!Net.on || G.t === Net.seat)) pickRoute(i); } else Net.conn.send({ k: 'pick', i });
 }
-function afterStart() { log('🎲 手番の順番：' + G.order.map(i => N(G.ps[i])).join(' → ')); announce(); }
-function startGame(ps, turns, ex0) { initUI(ps, turns, ex0); afterStart(); }
+function afterStart() { say('ゲーム開始！\nサイコロを振ろう🎲'); head(G.fog ? '🌫️ 霧モード：見えないマスは止まると公開' : '📍 イベント'); log('🎲 手番の順番：' + G.order.map(i => N(G.ps[i])).join(' → ')); announce(); }
+function startGame(ps, turns, fog) { initUI(ps, turns, fog); afterStart(); }
 function onRoll(i = -1) {
   if (!Net.on) return turn(i);
   if (Net.host) { if (G.t === Net.seat) turn(i); } else Net.conn.send({ k: 'roll', i });
 }
 
-function announce() {
-  const p = G.ps[G.t], left = G.turns - G.round;
-  const sub = G.stage === 'goal' ? '🏁 ゴールステージ！目指せゴール'
-    : `${G.round}/${G.turns}ターン ` + (left > 0 ? (left <= 5 ? `ゴールステージまであと${left}ターン` : '') : '最終ターン！この後ゴールステージへ');
-  say(`${N(p)}の番です\n${sub}`); renderStat();
-}
+function announce() { renderStat(); } // 手番表示は画面上部の「ターンバー」(renderTurn)が担当。イベント表示(#msg)とは独立
 
 async function rollDice(n = 1) {
   const r = () => [...Array(n)].map(() => rnd(1, 6));
@@ -53,7 +50,19 @@ function losesugar(p, n, why) {
   say(`${why}
 ${n > 1 ? 'お砂糖' + n + '人と' : 'お砂糖と'}破局…💔`); log(`${N(p)}：${why}（お砂糖と破局）`); renderStat();
 }
+function reveal(i, quiet) {
+  if (!G.hid) return; const k = G.hid.indexOf(i); if (k < 0) return;
+  G.hid.splice(k, 1); updateFog();
+  if (!quiet) { const t = TYPES[L()[i]]; log(`🔦 霧が晴れた：${t.icon}${t.label}`); }
+}
+const pickItem = () => (G.fog && rnd(1, 3) === 1) ? 'scope' : pick(ITEM_POOL);
 function giveItem(p, id) {
+  if (id === 'scope') {
+    const hs = (G.hid || []).slice(), got = [];
+    for (let k = 0; k < 5 && hs.length; k++) got.push(hs.splice(rnd(0, hs.length - 1), 1)[0]);
+    got.forEach(i => reveal(i, true));
+    say(`🔭 望遠鏡！霧が晴れた\n（${got.length}マス公開）`); log(`${N(p)}：望遠鏡で${got.length}マス公開`); return renderStat();
+  }
   const it = ITEMS[id];
   if (p.items.length >= 3) return add(p, 300, `${it.icon}${it.name}は持ちきれないので売却`);
   p.items.push(id); say(`${it.icon} ${it.name}をゲット！`); log(`${N(p)}：${it.name}を入手`); renderStat();
@@ -97,6 +106,7 @@ async function turn(ui = -1) {
   const p = G.ps[G.t]; if (p.done) return;
   if (ui >= 0 && (!p.items[ui] || p.items[ui] === 'amulet')) return;
   G.busy = true; renderStat();
+  log(`▶ ${N(p)} の手番（${G.stage === 'goal' ? 'ゴールステージ' : '第' + G.round + 'ターン'}）`);
   if (p.skip > 0) {
     p.skip--; say(`${N(p)}は足止め中…💤\n今回はお休み`); log(`${N(p)}：お休み`);
     await sleep(1200); return endTurn(p, false);
@@ -114,8 +124,11 @@ async function turn(ui = -1) {
     default: steps = await rollDice();
   }
   await moveBy(p, steps, delay);
-  await H[L()[p.pos]](p);
-  await sleep(1100);
+  const ty = L()[p.pos], hid = isHid(p.pos);
+  reveal(p.pos); renderStat();
+  head(`📍 ${N(p)} が ${TYPES[ty].icon}${TYPES[ty].label} に止まった${hid ? '（霧が晴れた！）' : ''}`); say('');
+  await H[ty](p);
+  await sleep(1800 + Math.min(2200, $('#msg').textContent.length * 45)); // イベント内容を読む時間（手番の表示とは別枠なので消えない）
   await endTurn(p, true);
 }
 
@@ -143,6 +156,7 @@ async function toGoalStage() {
   say('🏁 ゴールステージへ！\nここからは一本道。ゴールを目指せ！'); log('ゴールステージ開始');
   await sleep(1800);
   [...G.ps].sort((a, b) => score(b) - score(a)).forEach((p, i) => p.pos = G.ps.length - 1 - i);
+  if (G.fog) G.hid = makeHid(LAYOUT2.length, true);
   G.stage = 'goal'; G.oi = 0; G.t = G.order[0];
   renderBoard(); renderTokens(); renderStat();
   log('所持金の多い順にスタート位置が前になった');
@@ -166,10 +180,10 @@ const H = {
     const [t, m, f, s] = pick(TEXT.trouble); p.skip += s; add(p, m, t, f);
   },
   gacha: async p => {
-    if (rnd(1, 4) === 1) return giveItem(p, pick(ITEM_POOL));
+    if (rnd(1, 4) === 1) return giveItem(p, pickItem());
     const [t, m, f] = pick(TEXT.gacha); add(p, m, t, f);
   },
-  item: async p => giveItem(p, pick(ITEM_POOL)),
+  item: async p => giveItem(p, pickItem()),
   shukai: async p => {
     say('集会を開催！参加者は…？'); const d = await rollDice();
     add(p, d * 400 * mult(p) * (p.sugar ? 1.5 : 1), d === 1 ? '集会は過疎気味…' : `集会に${d * 5}人が来場！${p.sugar ? 'お砂糖が運営を手伝った' : ''}`, d >= 5 ? 1 : 0);
@@ -319,6 +333,33 @@ const H = {
     else if (d <= 4) add(p, 400, '投稿がバズった！', 1);
     else if (d === 5) { if (p.sugar > 1) add(p, -300, '多糖がバレかけて慌てて投稿削除'); else add(p, 600, '投げ銭が集まった'); }
     else add(p, 1000, '大バズり！', 1);
+  },
+  divorce: async p => {
+    if (p.married) { // 結婚している → 離婚の危機
+      say('離婚の危機…！3以下で離婚成立'); const d = await rollDice();
+      if (d <= 3) { p.married = false; p.exes++; add(p, -rnd(8, 20) * 100, '離婚が成立…慰謝料を支払った'); }
+      else add(p, 300, '話し合いで仲直り！夫婦円満', 1);
+      return;
+    }
+    if (p.sugar > 0) { // お砂糖がいる → 別れ話
+      say('お砂糖と別れ話…'); const d = await rollDice();
+      if (d <= 2) losesugar(p, 1, '別れ話がこじれた'); else add(p, 400, 'ちゃんと話して絆が深まった', 1);
+      return;
+    }
+    if (p.exes > 0) { // 元お砂糖がいる → 元お砂糖の話
+      say('元お砂糖の結婚・離婚の話を聞いた…'); const d = await rollDice();
+      if (d <= 3) add(p, -500, '元お砂糖の結婚式でご祝儀…複雑な気分'); else add(p, 300, '元お砂糖が円満な報告をくれた');
+      return;
+    }
+    // 元お砂糖もお砂糖もいない → 特殊イベント
+    say('離婚マス…だが別れる相手がいない！'); await sleep(900);
+    const ev = pick([
+      () => add(p, rnd(5, 12) * 100, '離婚相談員のバイトで稼いだ'),
+      () => add(p, 300, '「別れる相手がいない」が話題に', 1),
+      () => { p.friends++; say('友達の離婚の愚痴を聞いてあげた👫\n友達が増えた'); log(`${N(p)}：愚痴を聞いて友達が増えた`); renderStat(); },
+      () => add(p, -300, '友達の離婚調停の付き添いで交通費…')
+    ]);
+    ev();
   },
   goal: async p => {
     if (p.done) return;

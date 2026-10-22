@@ -5,7 +5,7 @@ const Net = {
   bc(m) { if (this.host) this.conns.forEach(c => c.open && c.send(m)); },
   sync() { // ゲーム状態を全員に送る（写真は開始時に1回だけ送るので除く）
     if (!this.host || !this.started || !G) return;
-    this.bc({ k: 'state', s: { t: G.t, round: G.round, turns: G.turns, stage: G.stage, order: G.order, choice: G.choice || null, busy: G.busy, over: G.over, ps: G.ps.map(p => ({ ...p, img: undefined })) } });
+    this.bc({ k: 'state', s: { t: G.t, round: G.round, turns: G.turns, stage: G.stage, order: G.order, hid: G.hid, fog: G.fog, choice: G.choice || null, busy: G.busy, over: G.over, ps: G.ps.map(p => ({ ...p, img: undefined })) } });
   }
 };
 let IMGS = [];
@@ -66,9 +66,9 @@ function hostRoom(phrase, me, ui) {
 
 function startOnline() {
   const ps = Net.lobby.map((p, i) => ({ name: p.name, img: p.img, color: p.color || COLORS[i] }));
-  const turns = clampTurns($('#tn').value), ex0 = +$('#ex0').value || 0;
-  Net.started = true; Net.conns.forEach(c => c.back = false); Net.bc({ k: 'start', ps, turns, ex0 });
-  initUI(ps, turns, ex0); afterStart();
+  const turns = clampTurns($('#tn').value), fog = $('#fog').checked;
+  Net.started = true; Net.conns.forEach(c => c.back = false); Net.bc({ k: 'start', ps, turns, fog });
+  initUI(ps, turns, fog); afterStart();
 }
 
 function joinRoom(phrase, me, ui) {
@@ -90,14 +90,16 @@ function onGuestMsg(m, ui) {
     case 'deny': ui.error(m.why); Net.peer.destroy(); break;
     case 'seat': Net.seat = m.seat; if (ui.seat) ui.seat(m.seat); break;
     case 'lobby': ui.update(m.list); break;
-    case 'start': IMGS = m.ps.map(p => p.img); Net.over = false; initUI(m.ps, m.turns, m.ex0); break;
+    case 'start': IMGS = m.ps.map(p => p.img); Net.over = false; initUI(m.ps, m.turns, m.fog); break;
     case 'prof': { const p = G.ps[m.i]; p.name = m.name; p.color = m.color; p.img = IMGS[m.i] = m.img; setPlayerStyles(); renderStat(); renderTokens(); break; }
     case 'state':
       const ch = G.stage !== m.s.stage;
-      G.t = m.s.t; G.round = m.s.round; G.turns = m.s.turns; G.stage = m.s.stage; G.busy = m.s.busy; G.choice = m.s.choice; G.order = m.s.order; G.over = m.s.over;
-      if (ch) renderBoard();
+      G.t = m.s.t; G.round = m.s.round; G.turns = m.s.turns; G.stage = m.s.stage; G.busy = m.s.busy; G.choice = m.s.choice; G.order = m.s.order; G.fog = m.s.fog;
+      const hc = JSON.stringify(G.hid) !== JSON.stringify(m.s.hid); G.hid = m.s.hid; G.over = m.s.over;
+      if (ch) renderBoard(); else if (hc) updateFog();
       G.ps = m.s.ps.map((p, i) => ({ ...p, img: IMGS[i] })); renderTokens(); renderStat(); break;
     case 'say': _say(m.v); break;
+    case 'head': _head(m.v); break;
     case 'log': _log(m.v); break;
     case 'dice': $('#dice').textContent = m.v; break;
     case 'end': finish(); break;

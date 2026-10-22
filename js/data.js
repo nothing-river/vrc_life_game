@@ -23,17 +23,17 @@ const TYPES = {
   collab:{icon:'🤝',label:'コラボ'}, social:{icon:'🍹',label:'交流'},
   quiz:{icon:'❓',label:'クイズ'}, item:{icon:'🎁',label:'アイテム'},
   ex:{icon:'💔',label:'元お砂糖'}, past:{icon:'🕵️',label:'お砂糖の過去'}, friend:{icon:'👫',label:'友達'},
-  offkai:{icon:'🍻',label:'オフ会'}, tata:{icon:'🌪️',label:'多糖・修羅場'}, sns:{icon:'📱',label:'SNS'}
+  offkai:{icon:'🍻',label:'オフ会'}, divorce:{icon:'📄',label:'離婚'}, tata:{icon:'🌪️',label:'多糖・修羅場'}, sns:{icon:'📱',label:'SNS'}
 };
 
 const LAYOUT = ['start','world','pay','shukai','sugar','shop','friend','event','job','item','photo','shukai','date','trouble',
  'dj','marry','pay','collab','warp','quiz','sugar','offkai','loss','job','social','shukai','rest','world','gacha','past',
- 'date','trouble','event','shop','ex','dj','photo','collab','job','warp','sns','item'];
+ 'date','divorce','event','shop','ex','dj','photo','collab','job','warp','sns','item'];
 // 分かれ道：from=分岐マス / to=合流マス / cells=寄り道の座標 / types=各マスの種類 / opts=選択肢の名前（先頭は本道）
 const BRANCHES = [
   { from: 38, to: 17, opts: ['外周を進む', '🌉近道ブリッジ（短縮・ドラマ多め）'],
     cells: [...Array(12)].map((_, i) => [i + 1, 4]),
-    types: ['friend','ex','past','offkai','item','sugar','tata','event','sns','shukai','date','pay'] },
+    types: ['friend','ex','past','offkai','item','sugar','tata','event','sns','shukai','date','divorce'] },
   { from: 4, to: 7, opts: ['直進', '💎お宝の寄り道（稼げる）'],
     cells: [[4,1],[4,2],[5,2],[6,2],[7,2],[7,1]], types: ['shukai','event','item','dj','photo','gacha'] },
   { from: 24, to: 27, opts: ['直進', '🌙ラブ寄り道（恋愛イベ多め）'],
@@ -67,7 +67,7 @@ const DEFAULT_TURNS = 30; // ルーム作成者が変更可能（5〜99）
 // ===== ゴールステージ（一本道・8列×3段の蛇行）=====
 const PATH2 = [];
 for (let r = 0; r < 3; r++) for (let c = 0; c < 8; c++) PATH2.push([r % 2 ? 7 - c : c, r]);
-const LAYOUT2 = ['start','world','pay','shukai','item','sugar','event','shop','gacha','dj','ex','date','photo','collab','item','trouble',
+const LAYOUT2 = ['start','world','pay','shukai','item','sugar','event','shop','gacha','dj','ex','date','photo','collab','item','divorce',
  'marry','event','tata','job','offkai','warp','pay','goal'];
 const GOAL_BONUS = [5000, 3000, 1500, 500]; // 基準額（add()でMONEY_SCALE倍される） // ゴール順ボーナス
 
@@ -79,6 +79,7 @@ const ITEMS = {
   train:{icon:'🚄',name:'新幹線',desc:'8マス進む'},
   ship:{icon:'🚢',name:'船',desc:'6マス進む'},
   bike:{icon:'🛵',name:'バイク',desc:'出目+3'},
+  scope:{icon:'🔭',name:'望遠鏡',desc:'(霧モード)見えないマスを5つ公開。取得した瞬間に使われる'},
   amulet:{icon:'🧿',name:'お守り',desc:'ピンチ・トラブルを1回無効(自動)'}
 };
 const ITEM_POOL = ['dice2','dice2','dice2','dice3','plane','train','ship','ship','bike','bike','amulet','amulet'];
