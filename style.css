@@ -150,47 +150,79 @@ button:focus-visible,input:focus-visible,.ph:focus-within{outline:3px solid var(
 @media(max-width:1000px){#game{grid-template-columns:1fr;grid-template-areas:'turn' 'board' 'panel' 'log';grid-template-rows:auto}#panel,#logbox{position:static;max-height:none;height:auto}#log{max-height:20em;min-height:8em}#boardwrap{max-height:54vh}#turn{position:sticky;top:0;z-index:5}}
 
 
-/* ===== マップをさらに縮小 ===== */
 
-#board {
-  grid-template-rows: repeat(9, minmax(52px, auto));
-  min-width: 700px;
-  gap: 3px;
-}
+/* ===== PC版：マップ全体をスクロールなしで表示 ===== */
 
-#board .cell b {
-  font-size: clamp(0.9rem, 1.5cqw, 1.5rem);
-}
+@media (min-width: 1001px) {
+  #game {
+    height: 100vh;
+    overflow: hidden;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
 
-#board .cell small {
-  font-size: clamp(0.55rem, 0.75cqw, 0.75rem);
-}
-
-#board .toks .tok {
-  width: clamp(18px, 1.8cqw, 28px);
-}
-
-#boardwrap {
-  max-height: calc(100vh - 85px);
-}
-
-/* ゴール用マップも縮小 */
-#board.g {
-  grid-template-rows: repeat(3, minmax(58px, auto));
-  min-width: 580px;
-}
-
-/* スマートフォン */
-@media (max-width: 1000px) {
   #boardwrap {
+    min-height: 0;
+    max-height: none;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  #board {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    min-height: 0;
+    grid-template-columns: repeat(14, minmax(0, 1fr));
+    grid-template-rows: repeat(9, minmax(0, 1fr));
+    gap: 3px;
+  }
+
+  #board .cell {
+    min-height: 0;
+    padding: 2px 1px;
+  }
+
+  #board .cell b {
+    font-size: clamp(0.7rem, 1.1vw, 1.2rem);
+  }
+
+  #board .cell small {
+    font-size: clamp(0.5rem, 0.65vw, 0.75rem);
+  }
+
+  #board .toks .tok {
+    width: clamp(14px, 1.5vw, 26px);
+  }
+
+  /* ゴール用マップ */
+  #board.g {
+    min-width: 0;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* スマートフォン・タブレットは従来どおり */
+@media (max-width: 1000px) {
+  #game {
+    height: auto;
+    overflow: visible;
+  }
+
+  #boardwrap {
+    height: auto;
     max-height: 70vh;
+    overflow: auto;
   }
 
   #board {
     min-width: 700px;
+    height: auto;
+    grid-template-rows: repeat(9, minmax(52px, auto));
   }
 
   #board.g {
     min-width: 580px;
+    grid-template-rows: repeat(3, minmax(58px, auto));
   }
 }
