@@ -148,3 +148,64 @@ button:focus-visible,input:focus-visible,.ph:focus-within{outline:3px solid var(
 }
 @media(min-width:1700px){:root{--panel-w:340px;--log-w:290px}#board{grid-template-columns:repeat(14,minmax(60px,1fr))}}
 @media(max-width:1000px){#game{grid-template-columns:1fr;grid-template-areas:'turn' 'board' 'panel' 'log';grid-template-rows:auto}#panel,#logbox{position:static;max-height:none;height:auto}#log{max-height:20em;min-height:8em}#boardwrap{max-height:54vh}#turn{position:sticky;top:0;z-index:5}}
+
+/* ===== マップサイズ調整：既存の操作パネル・ログは変更しない ===== */
+
+/* 通常マップ */
+#board {
+  grid-template-columns: repeat(14, minmax(0, 1fr));
+  grid-template-rows: repeat(
+    9,
+    minmax(clamp(58px, calc((100vh - 180px) / 9), 95px), auto)
+  );
+  min-width: 740px;
+  gap: 4px;
+}
+
+/* マス内の文字・アイコンをマップ幅に合わせて調整 */
+#board .cell b {
+  font-size: clamp(1rem, 1.8cqw, 1.8rem);
+}
+
+#board .cell small {
+  font-size: clamp(0.6rem, 0.85cqw, 0.85rem);
+}
+
+#board .toks .tok {
+  width: clamp(20px, 2.2cqw, 34px);
+  font-size: clamp(0.65rem, 0.85cqw, 0.9rem);
+}
+
+/* マップの表示領域 */
+#boardwrap {
+  min-width: 0;
+  max-width: 100%;
+  max-height: calc(100vh - 110px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+/* ゴール用マップ */
+#board.g {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-rows: repeat(
+    3,
+    minmax(clamp(65px, calc((100vh - 180px) / 3), 115px), auto)
+  );
+  min-width: 620px;
+}
+
+/* スマートフォン・狭い画面 */
+@media (max-width: 1000px) {
+  #boardwrap {
+    max-height: 60vh;
+  }
+
+  #board {
+    min-width: 740px;
+  }
+
+  #board.g {
+    min-width: 620px;
+  }
+}
