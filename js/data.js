@@ -95,3 +95,4 @@ const BADGES = {
   fbt:    { icon: '🕺', name: 'フルトラ', desc: '集会・イベ・DJなどの収入+30%' },
   pc:     { icon: '💻', name: '高性能PC', desc: 'ピンチ・損失が半分になる' }
 };
+window.VER_DATA = '2026.10.22-b';

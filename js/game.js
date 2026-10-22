@@ -402,3 +402,4 @@ function finish() {
     ${Net.on ? '<p class="lead">ホストが「ルームに戻る」を押すと、戻ってきた人が同じルームに集まります。</p>' : ''}`;
   $('#result').showModal();
 }
+window.VER_GAME = '2026.10.22-b';

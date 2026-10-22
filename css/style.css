@@ -1,3 +1,4 @@
+:root{--ver:'2026.10.22-b'}
 /* パステル（白・水色ベース）。色は :root の変数で一括変更できます */
 :root{--bg:#f4fbff;--panel:#fff;--line:#d3e6f4;--ink:#3d4f6b;--sub:#6b7d99;--sugar:#ffc2d9;--mint:#bdeee3;--gold:#ffe29a;--sky:#4f93c4;--shadow:0 2px 8px #7fb3d933}
 *{box-sizing:border-box}
@@ -116,3 +117,31 @@ button:focus-visible,input:focus-visible,.ph:focus-within{outline:3px solid var(
 .t-fog{--k:#cfd6e4;background:repeating-linear-gradient(45deg,#f2f5fa,#f2f5fa 6px,#e9eef6 6px,#e9eef6 12px)}
 .t-divorce{--k:#d7c7ff}
 .chk{display:flex;gap:8px;align-items:center}
+
+#verwarn{background:#ffd9d9;color:#7a1f1f;padding:10px 14px;font-weight:900;position:sticky;top:0;z-index:99;line-height:1.5}
+.ver{text-align:center;color:var(--sub);font-size:.75rem;margin:16px 0}
+
+.tn.chk input{width:auto;display:inline-block}
+
+/* ===== レイアウト v2：マップ / 操作 / ログ（PCは3カラム）===== */
+#boardwrap{container-type:inline-size}
+#board{grid-template-columns:repeat(14,minmax(60px,1fr));grid-template-rows:repeat(9,minmax(clamp(74px,7.4cqw,130px),auto));min-width:860px;gap:4px}
+.cell b{font-size:clamp(1.3rem,2.4cqw,2.4rem)}
+.cell small{font-size:clamp(.66rem,1.05cqw,1rem)}
+.toks .tok{width:clamp(24px,2.6cqw,42px);font-size:clamp(.7rem,1cqw,1rem)}
+.cell.fork::after,.cell.merge::after{font-size:clamp(.5rem,.9cqw,.75rem)}
+#board.g{grid-template-columns:repeat(8,minmax(76px,1fr));grid-template-rows:repeat(3,minmax(clamp(88px,10cqw,170px),auto));min-width:660px}
+#game{max-width:2400px;grid-template-columns:minmax(0,1fr) 380px;grid-template-areas:'turn turn' 'board panel' 'board log';grid-template-rows:auto auto 1fr}
+#panel{grid-area:panel;position:static;max-height:none}
+#logbox{grid-area:log;background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:10px 12px;box-shadow:var(--shadow);display:flex;flex-direction:column;min-height:0}
+#logbox h3{margin:0 0 6px;font-size:1rem;color:var(--sky)}
+#log{flex:1 1 auto;min-height:12em;max-height:30em;font-size:.88rem}
+@media(min-width:1400px){
+  #game{grid-template-columns:minmax(0,1fr) 330px 300px;grid-template-areas:'turn turn turn' 'board panel log';grid-template-rows:auto 1fr}
+  #board{grid-template-columns:repeat(14,minmax(50px,1fr));min-width:740px}
+  #panel,#logbox{position:sticky;top:8px;max-height:calc(100vh - 130px)}
+  #logbox{height:calc(100vh - 130px)}
+  #log{max-height:none;min-height:0;flex:1 1 0}
+}
+@media(min-width:1700px){#game{grid-template-columns:minmax(0,1fr) 360px 340px}#board{grid-template-columns:repeat(14,minmax(60px,1fr))}}
+@media(max-width:1000px){#game{grid-template-columns:1fr;grid-template-areas:'turn' 'board' 'panel' 'log';grid-template-rows:auto}#panel,#logbox{position:static;max-height:none;height:auto}#log{max-height:20em;min-height:8em}#boardwrap{max-height:54vh}#turn{position:sticky;top:0;z-index:5}}
