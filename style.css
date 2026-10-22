@@ -150,84 +150,109 @@ button:focus-visible,input:focus-visible,.ph:focus-within{outline:3px solid var(
 @media(max-width:1000px){#game{grid-template-columns:1fr;grid-template-areas:'turn' 'board' 'panel' 'log';grid-template-rows:auto}#panel,#logbox{position:static;max-height:none;height:auto}#log{max-height:20em;min-height:8em}#boardwrap{max-height:54vh}#turn{position:sticky;top:0;z-index:5}}
 
 
-/* ===== PC版：マップ全体を画面内に収める最終調整 ===== */
+
+/* ===== 修正：PC版は4人プレイを想定し、全体マップを画面内に収める ===== */
 @media (min-width: 1001px) {
+  /* ページ全体をスクロールさせず、画面内に配置 */
+  html,
+  body {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
   #game {
+    width: 100%;
+    max-width: none;
     height: 100dvh;
     max-height: 100dvh;
-    box-sizing: border-box;
+    min-height: 0;
     padding: 6px;
     gap: 8px;
     overflow: hidden;
     grid-template-rows: auto minmax(0, 1fr);
+    align-items: stretch;
   }
 
-  /* ターン表示の下に残る領域をマップに使用 */
+  /* マップ領域 */
   #boardwrap {
     height: 100%;
+    max-height: 100%;
     min-height: 0;
-    max-height: none;
+    min-width: 0;
     overflow: hidden;
-    align-self: stretch;
   }
 
-  /* マップ全体を縮小して表示 */
+  /* 14列×9行のマップ全体を縮小 */
   #board {
     width: 100%;
     height: 100%;
     min-width: 0;
     min-height: 0;
+    aspect-ratio: auto;
     grid-template-columns: repeat(14, minmax(0, 1fr));
     grid-template-rows: repeat(9, minmax(0, 1fr));
     gap: 2px;
   }
 
-  /* マス内の余白とアイコンを縮小 */
   #board .cell {
+    min-width: 0;
     min-height: 0;
     padding: 1px;
-    border-top-width: 3px;
     overflow: hidden;
   }
 
   #board .cell b {
-    font-size: clamp(0.6rem, 0.8vw, 0.95rem);
+    font-size: clamp(8px, 0.7vw, 12px);
+    line-height: 1.1;
   }
 
   #board .cell small {
-    font-size: clamp(0.45rem, 0.5vw, 0.62rem);
-    line-height: 1.05;
+    font-size: clamp(6px, 0.42vw, 8px);
+    line-height: 1.1;
+    overflow-wrap: anywhere;
   }
 
   #board .toks {
-    gap: 0;
-    padding-top: 0;
+    gap: 1px;
+    padding-top: 1px;
   }
 
   #board .toks .tok {
-    width: clamp(10px, 0.9vw, 17px);
+    width: clamp(10px, 0.85vw, 16px);
+    max-width: 100%;
     border-width: 1px;
-    font-size: 0.5rem;
+    font-size: 8px;
   }
 
-  /* ゴール用マップ */
+  #board .cell.fork::after,
+  #board .cell.merge::after {
+    font-size: 6px;
+  }
+
+  /* ゴール用マップも領域内に収める */
   #board.g {
     width: 100%;
     height: 100%;
     min-width: 0;
     min-height: 0;
+    aspect-ratio: auto;
     grid-template-columns: repeat(8, minmax(0, 1fr));
     grid-template-rows: repeat(3, minmax(0, 1fr));
   }
 
-  /* 操作パネル・ログは画面の高さに収める */
+  /* 操作パネルとログは独立して表示 */
   #panel,
   #logbox {
     min-height: 0;
-    max-height: calc(100dvh - 110px);
+    height: 100%;
+    max-height: 100%;
+    overflow: auto;
   }
 
-  #logbox {
-    height: calc(100dvh - 110px);
+  #log {
+    min-height: 0;
+    max-height: none;
+    flex: 1 1 0;
   }
 }
