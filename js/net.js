@@ -99,7 +99,9 @@ function onGuestMsg(m, ui) {
       if (ch) renderBoard(); else if (hc) updateFog();
       G.ps = m.s.ps.map((p, i) => ({ ...p, img: IMGS[i] })); renderTokens(); renderStat(); break;
     case 'say': _say(m.v); break;
-    case 'head': _head(m.v); break;
+    case 'head': _head(m.v, m.ty); break;
+    case 'fx': _sign(m.v); break;
+    case 'hold': _hold(m.ms); break;
     case 'log': _log(m.v); break;
     case 'dice': $('#dice').textContent = m.v; break;
     case 'end': finish(); break;
@@ -118,7 +120,7 @@ function applyProfile(pf) {
 
 // 結果画面から「ルームに戻る」。ホストが戻ると、戻ってきた人が同じルームに集まる
 function backToRoom() {
-  $('#result').close(); $('#game').hidden = true; $('#setup').hidden = false;
+  $('#result').close(); $('#game').hidden = true; $('#setup').hidden = false; if (document.body) document.body.classList.remove('playing');
   if (!Net.on) return; // 同じ端末プレイ：設定画面に戻る（名前・写真はそのまま）
   Net.over = false;
   if (Net.host) {
@@ -132,4 +134,4 @@ function backToRoom() {
     $('#lob').innerHTML = '<p class="lead">ホストがルームに戻るのを待っています…</p>';
   }
 }
-window.VER_NET = '2026.10.22-b';
+window.VER_NET = '2026.10.22-c';

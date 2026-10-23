@@ -1,4 +1,4 @@
-:root{--ver:'2026.10.22-b'}
+:root{--ver:'2026.10.22-c'}
 /* パステル（白・水色ベース）。色は :root の変数で一括変更できます */
 :root{--bg:#f4fbff;--panel:#fff;--line:#d3e6f4;--ink:#3d4f6b;--sub:#6b7d99;--sugar:#ffc2d9;--mint:#bdeee3;--gold:#ffe29a;--sky:#4f93c4;--shadow:0 2px 8px #7fb3d933}
 *{box-sizing:border-box}
@@ -136,12 +136,86 @@ button:focus-visible,input:focus-visible,.ph:focus-within{outline:3px solid var(
 #logbox{grid-area:log;background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:10px 12px;box-shadow:var(--shadow);display:flex;flex-direction:column;min-height:0}
 #logbox h3{margin:0 0 6px;font-size:1rem;color:var(--sky)}
 #log{flex:1 1 auto;min-height:12em;max-height:30em;font-size:.88rem}
+/* ▼ PC(幅1400px以上)の3カラム。マップの幅は「操作」「ログ」の幅を変えると増減します
+   （マップ＝残り全部）。下の2つの数字を小さくするとマップが広く、大きくすると狭くなります */
+:root{--panel-w:310px;--log-w:270px}
 @media(min-width:1400px){
-  #game{grid-template-columns:minmax(0,1fr) 330px 300px;grid-template-areas:'turn turn turn' 'board panel log';grid-template-rows:auto 1fr}
+  #game{max-width:none;grid-template-columns:minmax(0,1fr) var(--panel-w) var(--log-w);grid-template-areas:'turn turn turn' 'board panel log';grid-template-rows:auto 1fr}
   #board{grid-template-columns:repeat(14,minmax(50px,1fr));min-width:740px}
   #panel,#logbox{position:sticky;top:8px;max-height:calc(100vh - 130px)}
   #logbox{height:calc(100vh - 130px)}
   #log{max-height:none;min-height:0;flex:1 1 0}
 }
-@media(min-width:1700px){#game{grid-template-columns:minmax(0,1fr) 360px 340px}#board{grid-template-columns:repeat(14,minmax(60px,1fr))}}
+@media(min-width:1700px){:root{--panel-w:340px;--log-w:290px}#board{grid-template-columns:repeat(14,minmax(60px,1fr))}}
 @media(max-width:1000px){#game{grid-template-columns:1fr;grid-template-areas:'turn' 'board' 'panel' 'log';grid-template-rows:auto}#panel,#logbox{position:static;max-height:none;height:auto}#log{max-height:20em;min-height:8em}#boardwrap{max-height:54vh}#turn{position:sticky;top:0;z-index:5}}
+
+/* ===== 手番の順番（ログ上に固定）===== */
+#orderbar{display:flex;flex-wrap:wrap;align-items:center;gap:4px 3px;padding:6px 8px;margin-bottom:6px;background:#f4fbff;border:1px solid var(--line);border-radius:10px;font-size:.8rem;flex:none}
+#orderbar .ol{flex-basis:100%;font-weight:900;color:var(--sky)}#orderbar i{font-style:normal;color:var(--sub)}
+#orderbar .oi.cur .who{outline:3px solid var(--ink);outline-offset:1px}#orderbar .oi.dn{opacity:.45}
+
+/* ===== イベント演出 ===== */
+#event{position:relative;overflow:hidden;background:var(--ev,#fff8fb);border-color:var(--evb,#ffd9e6);transition:background .4s,border-color .4s}
+#event[data-ty=pay],#event[data-ty=job],#event[data-ty=world],#event[data-ty=shop],#event[data-ty=gacha],#event[data-ty=quiz],#event[data-ty=photo],#event[data-ty=item],#event[data-ty=goal]{--ev:#fff6d6;--evb:#ffd666}
+#event[data-ty=shukai],#event[data-ty=event],#event[data-ty=dj],#event[data-ty=offkai],#event[data-ty=collab],#event[data-ty=social],#event[data-ty=sns]{--ev:#fff0e0;--evb:#ffc58a}
+#event[data-ty=loss],#event[data-ty=trouble]{--ev:#ffe8e8;--evb:#ff9f9f}
+#event[data-ty=sugar],#event[data-ty=date],#event[data-ty=marry],#event[data-ty=friend]{--ev:#ffeaf3;--evb:#ff9fc4}
+#event[data-ty=ex],#event[data-ty=past],#event[data-ty=divorce],#event[data-ty=tata]{--ev:#f1ebff;--evb:#b9a2ff}
+#event[data-ty=warp],#event[data-ty=rest],#event[data-ty=start]{--ev:#eaf6ff;--evb:#9fd3f5}
+#evtop{display:flex;align-items:center;gap:8px}
+#evicon{font-size:2.2rem;line-height:1;min-width:1.2em;text-align:center;display:inline-block}
+#evbar{height:6px;background:#0000000f;border-radius:99px;margin-top:6px;overflow:hidden}
+#evbar i{display:block;height:100%;width:0;background:var(--evb,#ffd9e6);border-radius:99px}
+@keyframes evbar{from{width:100%}to{width:0}}
+@keyframes evpop{0%{transform:scale(.1) rotate(-40deg);opacity:0}55%{transform:scale(1.7) rotate(10deg);opacity:1}100%{transform:scale(1) rotate(0)}}
+@keyframes evshake{0%,100%{transform:translateX(0)}15%{transform:translateX(-7px)}35%{transform:translateX(7px)}55%{transform:translateX(-5px)}75%{transform:translateX(4px)}}
+@keyframes evfloat{0%{transform:translateY(0) scale(.6);opacity:0}15%{opacity:1}100%{transform:translateY(-130px) scale(1.4);opacity:0}}
+@keyframes evspin{from{transform:rotate(0) scale(.3)}to{transform:rotate(720deg) scale(1)}}
+@keyframes evglow{0%{box-shadow:0 0 0 0 var(--evb)}50%{box-shadow:0 0 18px 6px var(--evb)}100%{box-shadow:0 0 0 0 transparent}}
+@keyframes evflash{0%{transform:scale(.6);opacity:0}50%{transform:scale(1.25)}100%{transform:scale(1);opacity:1}}
+#event.pop #evicon{animation:evpop .9s cubic-bezier(.2,1.5,.4,1)}
+#event.pop{animation:evglow 1.3s ease-out}
+#event.pop[data-ty=loss],#event.pop[data-ty=trouble]{animation:evshake .7s}
+#event.pop[data-ty=ex],#event.pop[data-ty=past],#event.pop[data-ty=divorce],#event.pop[data-ty=tata]{animation:evshake .9s}
+#event.pop[data-ty=warp] #evicon{animation:evspin 1s ease-out}
+#event.pop[data-ty=rest] #evicon{animation:evpop 1.6s ease-out}
+#event.pop[data-ty=sugar]::after,#event.pop[data-ty=date]::after,#event.pop[data-ty=marry]::after,#event.pop[data-ty=friend]::after{content:'💗  💗  💗';position:absolute;left:20%;bottom:6px;font-size:1.4rem;animation:evfloat 2.4s ease-out forwards;pointer-events:none}
+#event.pop[data-ty=shukai]::after,#event.pop[data-ty=event]::after,#event.pop[data-ty=dj]::after,#event.pop[data-ty=offkai]::after,#event.pop[data-ty=collab]::after,#event.pop[data-ty=social]::after,#event.pop[data-ty=goal]::after{content:'🎉  ✨  🎊';position:absolute;left:25%;bottom:6px;font-size:1.4rem;animation:evfloat 2.2s ease-out forwards;pointer-events:none}
+#event.pop[data-ty=pay]::after,#event.pop[data-ty=job]::after,#event.pop[data-ty=gacha]::after,#event.pop[data-ty=item]::after{content:'✨  ✨  ✨';position:absolute;left:30%;bottom:6px;font-size:1.3rem;animation:evfloat 2s ease-out forwards;pointer-events:none}
+#event.plus #msg{animation:evflash .7s ease-out;color:#c8860a}
+#event.minus #msg{animation:evshake .6s;color:#c0392b}
+
+/* ===== PC：画面（ブラウザ）に収まるよう自動でサイズ調整。ズームしても崩れない ===== */
+@media (min-width:1000px) and (min-height:600px){
+  body.playing{height:100vh;height:100dvh;overflow:hidden}
+  body.playing .ver{display:none}
+  body.playing #game{height:100vh;height:100dvh;max-width:none;padding:8px;gap:8px;align-items:stretch;grid-template-columns:minmax(0,1fr) var(--panel-w);grid-template-areas:'turn turn' 'board panel' 'board log';grid-template-rows:auto minmax(0,62fr) minmax(0,38fr)}
+  body.playing #turn{display:flex;align-items:center;flex-wrap:wrap;gap:4px 18px;padding:6px 14px}
+  body.playing #turn .t1{flex:none}body.playing #turn .t2{flex:none}
+  body.playing #turn .bar{flex:1;min-width:140px;margin:0}
+  body.playing #boardwrap{container-type:size;max-height:none;min-height:0;display:grid;place-items:center;overflow:hidden}
+  body.playing #board{--u:min(100cqw/14,100cqh/9);--v:min(var(--u),104px);width:calc(var(--u)*14);height:calc(var(--u)*9);min-width:0;grid-template-columns:repeat(14,1fr);grid-template-rows:repeat(9,1fr);gap:calc(var(--u)*.035)}
+  body.playing #board.g{--u:min(100cqw/8,100cqh/3);width:calc(var(--u)*8);height:calc(var(--u)*3);grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(3,1fr)}
+  body.playing .cell{overflow:hidden;padding:calc(var(--v)*.03) 2px}
+  body.playing .cell b{font-size:calc(var(--v)*.34)}
+  body.playing .cell small{font-size:max(10px,calc(var(--v)*.15));line-height:1.1}
+  body.playing .toks{flex-wrap:nowrap;gap:0;padding-top:0}
+  body.playing .toks .tok{width:calc(var(--v)*.3);font-size:calc(var(--v)*.15);margin-left:calc(var(--v)*-.08)}
+  body.playing .toks .tok:first-child{margin-left:0}
+  body.playing .cell.fork::after,body.playing .cell.merge::after{font-size:max(8px,calc(var(--v)*.11))}
+  body.playing #panel{position:static;max-height:none;height:auto;min-height:0;overflow:auto;padding:8px;gap:6px}
+  body.playing #logbox{position:static;max-height:none;height:auto;min-height:0;overflow:hidden}
+  body.playing #log{max-height:none;min-height:0;flex:1 1 0}
+  body.playing .pc{padding:3px 6px}body.playing .pc .tok{width:28px}body.playing .chip{font-size:.66rem;padding:0 6px}
+  body.playing #stat{grid-template-columns:1fr 1fr;gap:4px}
+  body.playing .pc strong{font-size:.85rem}body.playing .mny{font-size:.85rem!important}
+  body.playing #event{padding:4px 8px}body.playing #evicon{font-size:1.7rem}
+  body.playing #msg{min-height:3.2em;font-size:clamp(.9rem,1.5vh,1.15rem)}
+  body.playing #dice{min-width:52px;height:52px;font-size:1.3rem}
+  body.playing .big{padding:.5em 1.3em}
+  body.playing #legend,body.playing #editme{flex:none}
+}
+@media (min-width:1400px) and (min-height:600px){
+  body.playing #game{grid-template-columns:minmax(0,1fr) var(--panel-w) var(--log-w);grid-template-areas:'turn turn turn' 'board panel log';grid-template-rows:auto minmax(0,1fr)}
+  body.playing #stat{grid-template-columns:1fr}
+}

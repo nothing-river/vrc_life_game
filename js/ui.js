@@ -194,8 +194,13 @@ function renderTurn() {
   const bar = goal ? '' : `<div class="bar"><i style="width:${Math.min(100, (G.round - 1 + k / n) / G.turns * 100)}%"></i></div>`;
   $('#turn').innerHTML = `<div class="t1">${head1}</div>${bar}<div class="t2" style="${cv(cp.color)}">${tok(cp)}<strong>${esc(cp.name)}</strong> の番<small>（手番 ${k}/${n}）</small></div>`;
 }
+// 手番の順番（ログの上に固定表示。ログが流れても消えない）
+function renderOrder() {
+  const el = $('#orderbar'); if (!el || !G.order) return;
+  el.innerHTML = '<span class="ol">🎲 手番の順番</span>' + G.order.map((si, k) => `${k ? '<i>→</i>' : ''}<span class="oi${si === G.t ? ' cur' : ''}${G.ps[si].done ? ' dn' : ''}">${fmt(`\u0001${si}\u0002`, true)}</span>`).join('');
+}
 function renderStat() {
-  renderTurn();
+  renderTurn(); renderOrder();
   $('#stat').innerHTML = (G.order || G.ps.map((_, i) => i)).map((si, k) => { const p = G.ps[si]; return `
     <div class="pc ${si === G.t ? 'now' : ''}" style="${cv(p.color)}"><div class="pt">${tok(p)}<div><strong><i class="ord">${k + 1}</i>${esc(p.name)}${p.done ? ' 🏁' + p.rank + '位' : ''}</strong>
     <span class="mny">${yen(p.money)}</span></div></div><div class="chips">${chips(p)}</div></div>`; }).join('');
@@ -218,8 +223,19 @@ const _log = t => {
   const ol = $('#log'); ol.insertAdjacentHTML('afterbegin', `<li${String(t).startsWith('▶') ? ' class="sep"' : ''}>${fmt(t, true)}</li>`);
   while (ol.children && ol.children.length > 300) ol.lastChild.remove(); // 直近300件を保持（スクロールで過去ログを確認）
 };
-const _head = t => $('#evh').textContent = fmt(t, false);
-const head = t => { _head(t); Net.bc({ k: 'head', v: t }); };
+// ===== イベント演出（マスの種類ごとの見た目・数字の増減・表示時間バー）=====
+const _restart = (e, c) => { if (!e || !e.classList || !e.classList.remove) return; e.classList.remove(c); void e.offsetWidth; e.classList.add(c); };
+const _head = (t, ty) => {
+  $('#evh').textContent = fmt(t, false);
+  const e = $('#event'); if (e.dataset) e.dataset.ty = ty || '';
+  $('#evicon').textContent = ty && TYPES[ty] ? TYPES[ty].icon : '';
+  if (ty) _restart(e, 'pop');
+};
+const head = (t, ty) => { _head(t, ty); Net.bc({ k: 'head', v: t, ty }); };
+const _sign = k => { const e = $('#event'); if (e && e.classList && e.classList.remove) e.classList.remove('plus', 'minus'); _restart(e, k); };
+const fx = k => { if (!k) return; _sign(k); Net.bc({ k: 'fx', v: k }); };
+const _hold = ms => { const b = $('#evbar i'); if (!b || !b.style) return; b.style.animation = 'none'; void b.offsetWidth; b.style.animation = `evbar ${ms}ms linear forwards`; };
+const hold = ms => { _hold(ms); Net.bc({ k: 'hold', ms }); };
 const _say = t => $('#msg').textContent = fmt(t, false);
 const log = t => { _log(t); Net.bc({ k: 'log', v: t }); };
 const say = t => { _say(t); Net.bc({ k: 'say', v: t }); };
@@ -249,4 +265,4 @@ function openProfile() {
   $('#psave').onclick = () => { d.close(); applyProfile(cleanProfile({ name: d.querySelector('.nm').value.trim(), img, color: cc.get() }, me.name)); };
   d.showModal();
 }
-window.VER_UI = '2026.10.22-b';
+window.VER_UI = '2026.10.22-c';

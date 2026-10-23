@@ -1,4 +1,6 @@
 let G;
+// 演出の時間設定（ミリ秒）：マス到着の演出 → 内容 → 読む時間
+const FX_INTRO = 1200, FX_HOLD_MIN = 3500, FX_HOLD_PER_CHAR = 70, FX_HOLD_MAX = 8000;
 const L = () => G.stage === 'goal' ? LAYOUT2 : LAYOUT;
 const mult = p => 1 + p.fame * .1 + (p.fbt ? .3 : 0);
 const others = p => G.ps.filter(o => o !== p);
@@ -12,7 +14,7 @@ function initUI(ps, turns, fog) {
   G = { order, oi: 0, ps: ps.map(p => ({ ...p, pos: 0, money: START_MONEY, sugar: 0, friends: 0, exes: 0, live: false, married: false, fbt: false, pc: false, fame: 0, skip: 0, items: ['dice2'], done: false, rank: 0 })),
     t: order[0], round: 1, turns: turns || DEFAULT_TURNS, fog: !!fog, hid: null, stage: 'main', fin: 0, busy: false, over: false };
   if (G.fog) G.hid = makeHid(LAYOUT.length, false);
-  $('#setup').hidden = true; $('#game').hidden = false;
+  $('#setup').hidden = true; $('#game').hidden = false; if (document.body) document.body.classList.add('playing');
   $('#roll').onclick = () => onRoll(-1);
   $('#items').onclick = e => { const x = e.target.closest('button'); if (x && !x.disabled) onRoll(+x.dataset.i); };
   $('#route').onclick = e => { const x = e.target.closest('button'); if (x && !x.disabled) onPick(+x.dataset.i); };
@@ -23,7 +25,7 @@ function initUI(ps, turns, fog) {
 function onPick(i) {
   if (!Net.on || Net.host) { if (G.choice && (!Net.on || G.t === Net.seat)) pickRoute(i); } else Net.conn.send({ k: 'pick', i });
 }
-function afterStart() { say('ゲーム開始！\nサイコロを振ろう🎲'); head(G.fog ? '🌫️ 霧モード：見えないマスは止まると公開' : '📍 イベント'); log('🎲 手番の順番：' + G.order.map(i => N(G.ps[i])).join(' → ')); announce(); }
+function afterStart() { say('ゲーム開始！\nサイコロを振ろう🎲'); head(G.fog ? '🌫️ 霧モード：見えないマスは止まると公開' : '📍 イベント'); announce(); }
 function startGame(ps, turns, fog) { initUI(ps, turns, fog); afterStart(); }
 function onRoll(i = -1) {
   if (!Net.on) return turn(i);
@@ -43,7 +45,7 @@ function add(p, n, text, fm = 0) {
   n = Math.round(n * MONEY_SCALE / 100) * 100; p.money += n; if (fm) fame(p, fm);
   const f = fm > 0 ? ' ⭐UP' : fm < 0 ? ' ⭐DOWN' : '';
   log(`${N(p)}：${text}（${n >= 0 ? '+' : ''}${yen(n)}${f}）`);
-  say(`${text}\n${n >= 0 ? '+' : ''}${yen(n)}${f}`); renderStat();
+  say(`${text}\n${n >= 0 ? '+' : ''}${yen(n)}${f}`); fx(n > 0 ? 'plus' : n < 0 ? 'minus' : null); renderStat();
 }
 function losesugar(p, n, why) {
   n = Math.min(n, p.sugar); p.sugar -= n; p.exes += n; if (!p.sugar) p.live = false;
@@ -126,9 +128,11 @@ async function turn(ui = -1) {
   await moveBy(p, steps, delay);
   const ty = L()[p.pos], hid = isHid(p.pos);
   reveal(p.pos); renderStat();
-  head(`📍 ${N(p)} が ${TYPES[ty].icon}${TYPES[ty].label} に止まった${hid ? '（霧が晴れた！）' : ''}`); say('');
+  head(`📍 ${N(p)} が ${TYPES[ty].icon}${TYPES[ty].label} に止まった${hid ? '（霧が晴れた！）' : ''}`, ty); say('');
+  await sleep(FX_INTRO); // マス到着の演出を見せる
   await H[ty](p);
-  await sleep(1800 + Math.min(2200, $('#msg').textContent.length * 45)); // イベント内容を読む時間（手番の表示とは別枠なので消えない）
+  const ms = Math.min(FX_HOLD_MAX, FX_HOLD_MIN + $('#msg').textContent.length * FX_HOLD_PER_CHAR); // 内容を読む時間（バーで残り時間を表示）
+  hold(ms); await sleep(ms);
   await endTurn(p, true);
 }
 
@@ -402,4 +406,4 @@ function finish() {
     ${Net.on ? '<p class="lead">ホストが「ルームに戻る」を押すと、戻ってきた人が同じルームに集まります。</p>' : ''}`;
   $('#result').showModal();
 }
-window.VER_GAME = '2026.10.22-b';
+window.VER_GAME = '2026.10.22-c';
