@@ -1,4 +1,4 @@
-:root{--ver:'2026.10.22-c'}
+:root{--ver:'2026.10.24-e'}
 /* パステル（白・水色ベース）。色は :root の変数で一括変更できます */
 :root{--bg:#f4fbff;--panel:#fff;--line:#d3e6f4;--ink:#3d4f6b;--sub:#6b7d99;--sugar:#ffc2d9;--mint:#bdeee3;--gold:#ffe29a;--sky:#4f93c4;--shadow:0 2px 8px #7fb3d933}
 *{box-sizing:border-box}
@@ -219,3 +219,50 @@ button:focus-visible,input:focus-visible,.ph:focus-within{outline:3px solid var(
   body.playing #game{grid-template-columns:minmax(0,1fr) var(--panel-w) var(--log-w);grid-template-areas:'turn turn turn' 'board panel log';grid-template-rows:auto minmax(0,1fr)}
   body.playing #stat{grid-template-columns:1fr}
 }
+
+/* ===== クイズ ===== */
+#quiz{border:2px solid #cbb8ff;background:#f7f2ff;border-radius:12px;padding:8px 10px;flex:none}
+.qh{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:900;font-size:.85rem;color:var(--sub)}
+.qh b{color:#c85583;font-size:1rem}
+.qtext{font-weight:900;margin:4px 0;overflow-wrap:anywhere}
+.qchs{display:grid;gap:4px}.qchs button{text-align:left;border-radius:10px;padding:.35em .8em;overflow-wrap:anywhere}
+.qnum{display:flex;gap:6px}.qnum input{flex:1;min-width:0;font:inherit;padding:.4em .8em;border-radius:10px;border:2px solid var(--line)}
+.qwho,.qst{font-size:.78rem;color:var(--sub);margin-top:4px}.qans{font-size:.95rem}
+.qres{margin:4px 0;padding-left:0;list-style:none;font-size:.85rem}.qres li{padding:2px 0}
+.qd{flex-basis:100%;padding-left:0;font-size:.85rem;color:var(--sub)}.qd summary{cursor:pointer;color:var(--sky);font-weight:900}
+.qf{border:1px solid var(--line);border-radius:10px;padding:8px;margin:6px 0;background:#fbfeff}
+.qrow{display:flex;gap:8px;margin-bottom:4px}.qrow select{flex:1;font:inherit;padding:.3em;border-radius:8px;border:2px solid var(--line)}
+.qc{display:flex;align-items:center;gap:6px;margin:3px 0}.qc .nm{padding:.4em .7em}.qadd,.qdel{font-size:.8rem;padding:.2em .9em}
+
+/* ===== 追加機能：新しいマス・選択UI・ミニゲーム ===== */
+.t-duel{--k:#ff9f9f}.t-tax{--k:#cfc6ee}.t-invest{--k:#ffd666}.t-avatar{--k:#ffb7d0}.t-report{--k:#ff9b9b}.t-gamble{--k:#ffe14d}.t-detective{--k:#b9a2ff}.t-rob{--k:#ff8fb8}.t-alliance{--k:#9fd3f5}
+#event[data-ty=duel],#event[data-ty=rob]{--ev:#ffe8e8;--evb:#ff9f9f}
+#event[data-ty=tax],#event[data-ty=invest],#event[data-ty=gamble],#event[data-ty=avatar]{--ev:#fff6d6;--evb:#ffd666}
+#event[data-ty=report]{--ev:#ffe8e8;--evb:#ff9f9f}
+#event[data-ty=detective],#event[data-ty=alliance]{--ev:#f1ebff;--evb:#b9a2ff}
+#event.pop[data-ty=duel],#event.pop[data-ty=rob],#event.pop[data-ty=report]{animation:evshake .7s}
+.rtq{font-weight:900;font-size:.9rem;line-height:1.5;margin-bottom:2px}.rtw{color:var(--sub);font-size:.85rem;text-align:center;padding:4px}
+#route:not(:empty){border:2px dashed var(--evb,#ffd666);border-radius:12px;padding:6px 8px;background:#fffdf3}
+.qnum{display:flex;gap:6px}.qnum input{flex:1;font:inherit;padding:.5em .8em;border:2px solid var(--line);border-radius:10px}
+#mission{flex:none}#mission details{font-size:.82rem;color:var(--ink);background:#fff7fb;border:1px solid #ffd9e6;border-radius:10px;padding:4px 8px}
+#mission summary{cursor:pointer;font-weight:900;color:#c85583}#mission p{margin:4px 0}
+.gl{background:#fff1c9;border:1px solid #ffd666;border-radius:99px;padding:1px 10px;font-size:.8rem;color:#7a5a00;font-weight:900}
+#mini{border:3px solid var(--sky);border-radius:20px;background:#fff;color:var(--ink);width:min(94%,460px);text-align:center}
+#mini::backdrop{background:#3d4f6bcc}
+.mbig{width:100%;height:42vh;min-height:200px;font:inherit;font-size:2rem;font-weight:900;border:none;border-radius:20px;background:#e6f2fa;color:var(--ink);touch-action:manipulation;user-select:none}
+.mbig.wait{background:#ffd9d9}.mbig.go{background:#9be08f}.mbig.bad{background:#ff9f9f}.mbig.ok{background:#ffe08a}
+
+/* ===== 音量パネル / 全体イベントの固定表示 / 観戦 ===== */
+#audioctl{position:fixed;top:10px;right:14px;z-index:60;display:flex;align-items:flex-start;gap:4px;background:#ffffffd9;border:2px solid var(--line);border-radius:999px;padding:2px 8px;box-shadow:var(--shadow);backdrop-filter:blur(4px)}
+#audioctl button{border:none;background:none;padding:2px 6px;min-height:0;font-size:1.1rem}
+#audioctl details{font-size:.75rem;color:var(--sub);position:relative}#audioctl summary{cursor:pointer;padding:4px 4px;list-style:none}
+#audioctl details[open]{background:#fff;border-radius:12px;padding:0 8px 6px;box-shadow:var(--shadow)}
+#audioctl label{display:flex;align-items:center;gap:6px;white-space:nowrap}#audioctl input[type=range]{width:100px}
+body.playing #turn{padding-right:150px}
+#globalbar{flex:none}
+#globalbar .gb{display:flex;flex-direction:column;gap:2px;background:linear-gradient(90deg,#fff1c9,#ffe3ef);border:2px solid #ffd666;border-radius:10px;padding:6px 10px;margin-bottom:6px;font-size:.82rem;color:#5a4300}
+#globalbar .gb b{font-size:.9rem}
+#specbox{margin-top:4px;display:grid;gap:3px}#specbox .sp{background:#fff;border:1px solid var(--line);border-radius:8px;padding:3px 8px;font-size:.85rem;font-weight:900}
+@media(max-width:1000px){#turn{padding-right:130px}}
+
+.mbig.wait,.mbig.wait:hover{background:#ffd0d0!important}.mbig.go,.mbig.go:hover{background:#5fe36a!important;color:#103b14}.mbig.bad,.mbig.bad:hover{background:#ff8f8f!important}.mbig.ok,.mbig.ok:hover{background:#ffe08a!important}

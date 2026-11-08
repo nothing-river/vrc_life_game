@@ -52,7 +52,7 @@ const photoNote = online => `<p class="note">📷 写真は保存していませ
 // ===== セットアップ画面（同じ端末 / ルーム作成 / ルーム入室）=====
 const rowHtml = i => `<div class="prow" data-i="${i}">
   <label class="ph" style="--c:${COLORS[i]}"><input type="file" accept="image/*" hidden><span>写真</span></label>
-  <input class="nm" maxlength="8" placeholder="プレイヤー${i + 1}の名前"><div class="cwrap"></div></div>`;
+  <input class="nm" maxlength="8" placeholder="プレイヤー${i + 1}の名前"><div class="cwrap"></div><details class="qd"><summary>❓ クイズ問題を登録（出題者になる）<span class="qn"></span></summary><div class="qe"></div></details></div>`;
 function bindRow(r, photos, i, cb) {
   r.querySelector('input[type=file]').onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
@@ -85,9 +85,10 @@ function buildSetup(onStart) {
     el.querySelector('#count').onclick = e => { if (e.target.dataset.n) { n = +e.target.dataset.n; sync(); } };
     el.querySelectorAll('.prow').forEach((r, i) => bindRow(r, photos, i));
     const cc = [...el.querySelectorAll('.cwrap')].map((w, i) => colorCtl(w, COLORS[i]));
+    const qe = [...el.querySelectorAll('.qe')].map(h => qEditor(h));
     el.querySelector('.back').onclick = menu;
     $('#go').onclick = () => onStart([...Array(n)].map((_, i) => ({
-      name: el.querySelectorAll('.nm')[i].value.trim() || `P${i + 1}`, img: photos[i], color: cc[i].get() || COLORS[i] })), clampTurns($('#tn').value), $('#fog').checked);
+      name: el.querySelectorAll('.nm')[i].value.trim() || `P${i + 1}`, img: photos[i], color: cc[i].get() || COLORS[i], qs: qe[i].get() })), clampTurns($('#tn').value), readRules());
     sync();
   };
   const online = isHost => {
@@ -99,7 +100,7 @@ function buildSetup(onStart) {
       <input id="pw" class="nm pw" maxlength="20" placeholder="合言葉（なんでもOK）">${isHost ? turnsHtml : ''}
       <p id="err" class="err" role="alert"></p>
       <button id="go" class="big">${isHost ? 'ルーム作成' : '入室'}</button> <button class="back">戻る</button><div id="lob"></div>`;
-    const meNow = () => cleanProfile({ name: el.querySelector('.nm').value.trim(), img: photos[0], color: cc.get() }, isHost ? 'ホスト' : 'ゲスト');
+    const meNow = () => cleanProfile({ name: el.querySelector('.nm').value.trim(), img: photos[0], color: cc.get(), qs: qe.get() }, isHost ? 'ホスト' : 'ゲスト');
     let pt; // 入室後も名前・写真を変更できる（開始前）。変更はロビーの全員に反映
     const sendProfile = () => { clearTimeout(pt); pt = setTimeout(() => {
       if (Net.started) return;
@@ -107,6 +108,7 @@ function buildSetup(onStart) {
       else if (Net.conn && Net.conn.open) Net.conn.send({ k: 'profile', ...meNow() });
     }, 350); };
     const cc = colorCtl(el.querySelector('.cwrap'), COLORS[0], sendProfile);
+    const qe = qEditor(el.querySelector('.qe'), sendProfile);
     el.querySelector('.nm').oninput = sendProfile;
     bindRow(el.querySelector('.prow'), photos, 0, sendProfile);
     el.querySelector('.back').onclick = () => { if (Net.peer) Net.peer.destroy(); Net.on = Net.host = false; menu(); };
@@ -115,7 +117,7 @@ function buildSetup(onStart) {
       error: m => { $('#err').textContent = m; $('#go').disabled = false; },
       update: list => {
         $('#lob').innerHTML = `<h2>参加者 ${list.length}/4</h2>` +
-          list.map((p, i) => `<div class="pc">${tok({ ...p, color: p.color || COLORS[i] })}<strong>${esc(p.name)}</strong>${i === 0 ? '（ホスト）' : ''}</div>`).join('') + (list.some((a, i) => list.some((b, j) => j > i && colorGap(a.color || COLORS[i], b.color || COLORS[j]) < 70)) ? '<p class="err">色が近い人がいます。見分けにくいので変更をおすすめします。</p>' : '') + '<p class="lead">名前・写真・色は入室後も上の欄で変更できます。</p>' +
+          list.map((p, i) => `<div class="pc">${tok({ ...p, color: p.color || COLORS[i] })}<strong>${esc(p.name)}</strong>${i === 0 ? '（ホスト）' : ''}<small>　❓${(p.qs ? p.qs.length : p.qn) || 0}問</small></div>`).join('') + (list.some((a, i) => list.some((b, j) => j > i && colorGap(a.color || COLORS[i], b.color || COLORS[j]) < 70)) ? '<p class="err">色が近い人がいます。見分けにくいので変更をおすすめします。</p>' : '') + '<p class="lead">名前・写真・色は入室後も上の欄で変更できます。</p>' +
           (isHost ? `<button id="start" class="big" ${list.length < 2 ? 'disabled' : ''}>この人数で開始</button>` : '<p class="lead">ホストの開始を待っています…</p>');
         if (isHost) $('#start').onclick = startOnline;
       }
@@ -169,9 +171,10 @@ function renderTokens() {
 }
 
 const chip = (b, suffix = '') => `<span class="chip" data-tip="${esc(b.name)}：${esc(b.desc)}" title="${esc(b.name)}：${esc(b.desc)}">${b.icon}${b.name}${suffix}</span>`;
-function chips(p) {
-  const c = [];
-  if (p.sugar) c.push(chip(BADGES.sugar, '×' + p.sugar));
+function chips(p, hide) {
+  const c = [], S = hide ? Math.min(p.sugar, 1) : p.sugar, tip = (t, label) => `<span class="chip" data-tip="${esc(t)}" title="${esc(t)}">${label}</span>`;
+  if (S) c.push(chip(BADGES.sugar, '×' + S));
+  if (p.sugar && !hide) { const t = TRAITS[p.trait]; c.push(tip(`好感度：${BADGES.love.desc}${t ? '／性格 ' + t.name + '：' + t.desc : ''}`, `💗${p.love}/10${t ? t.icon + t.name : ''}`)); }
   if (p.live) c.push(chip(BADGES.live));
   if (p.married) c.push(chip(BADGES.married));
   if (p.friends) c.push(chip(BADGES.friends, '×' + p.friends));
@@ -179,6 +182,14 @@ function chips(p) {
   if (p.fame) c.push(chip(BADGES.fame, '×' + p.fame));
   if (p.fbt) c.push(chip(BADGES.fbt));
   if (p.pc) c.push(chip(BADGES.pc));
+  if (p.job && JOBS[p.job]) c.push(tip(`${JOBS[p.job].name}：${JOBS[p.job].desc}`, `${JOBS[p.job].icon}${JOBS[p.job].name}`));
+  if (p.style && STYLES[p.style]) c.push(tip(`${STYLES[p.style].name}：${STYLES[p.style].desc}`, `${STYLES[p.style].icon}${STYLES[p.style].name}`));
+  if (p.royal && p.royal.n > 0) c.push(chip(BADGES.royal, '×' + p.royal.n));
+  if (p.regulars) c.push(chip(BADGES.regs, '×' + p.regulars));
+  if (p.ally != null && G.ps[p.ally] && p.allyN > 0) c.push(tip(`同盟：${BADGES.ally.desc}（残り${p.allyN}手番）`, `🔗同盟:${esc(G.ps[p.ally].name)}(${p.allyN})`));
+  if (p.debt) c.push(chip(BADGES.debt, ' ' + yen(p.debt)));
+  if (p.muted > 0) c.push(chip(BADGES.muted));
+  if (p.mission && !(G.rules && G.rules.missions === false)) c.push(chip(BADGES.mission));
   p.items.forEach(k => c.push(`<span class="chip it" data-tip="${ITEMS[k].name}：${ITEMS[k].desc}" title="${ITEMS[k].name}：${ITEMS[k].desc}">${ITEMS[k].icon}${ITEMS[k].name}</span>`));
   return c.join('') || '<span class="chip none">なし</span>';
 }
@@ -192,7 +203,7 @@ function renderTurn() {
   const head1 = goal ? '<b class="big1">🏁 ゴールステージ</b><span>ゴールまで一本道！</span>'
     : `<b class="big1">第 ${G.round} / ${G.turns} ターン</b><span>${left > 0 ? (left <= 5 ? `ゴールステージまであと${left}ターン` : `残り${left}ターン`) : '最終ターン！この後ゴールステージへ'}</span>`;
   const bar = goal ? '' : `<div class="bar"><i style="width:${Math.min(100, (G.round - 1 + k / n) / G.turns * 100)}%"></i></div>`;
-  $('#turn').innerHTML = `<div class="t1">${head1}</div>${bar}<div class="t2" style="${cv(cp.color)}">${tok(cp)}<strong>${esc(cp.name)}</strong> の番<small>（手番 ${k}/${n}）</small></div>`;
+  $('#turn').innerHTML = `<div class="t1">${head1}${G.global ? `<span class="gl">🌐 ${esc(G.global.icon)}${esc(G.global.name)}：${esc(G.global.desc)}</span>` : ''}</div>${bar}<div class="t2" style="${cv(cp.color)}">${tok(cp)}<strong>${esc(cp.name)}</strong> の番<small>（手番 ${k}/${n}）</small></div>`;
 }
 // 手番の順番（ログの上に固定表示。ログが流れても消えない）
 function renderOrder() {
@@ -200,18 +211,23 @@ function renderOrder() {
   el.innerHTML = '<span class="ol">🎲 手番の順番</span>' + G.order.map((si, k) => `${k ? '<i>→</i>' : ''}<span class="oi${si === G.t ? ' cur' : ''}${G.ps[si].done ? ' dn' : ''}">${fmt(`\u0001${si}\u0002`, true)}</span>`).join('');
 }
 function renderStat() {
-  renderTurn(); renderOrder();
+  renderTurn(); renderOrder(); renderGlobalBar(); audioTick(); renderQuiz();
   $('#stat').innerHTML = (G.order || G.ps.map((_, i) => i)).map((si, k) => { const p = G.ps[si]; return `
     <div class="pc ${si === G.t ? 'now' : ''}" style="${cv(p.color)}"><div class="pt">${tok(p)}<div><strong><i class="ord">${k + 1}</i>${esc(p.name)}${p.done ? ' 🏁' + p.rank + '位' : ''}</strong>
-    <span class="mny">${yen(p.money)}</span></div></div><div class="chips">${chips(p)}</div></div>`; }).join('');
+    <span class="mny">${yen(p.money)}</span></div></div><div class="chips">${chips(p, Net.on && si !== Net.seat && !p.exposed)}</div></div>`; }).join('');
   const cp = G.ps[G.t], own = !(Net.on && G.t !== Net.seat), mine = !G.busy && !G.over && !cp.done && own;
-  $('#items').innerHTML = cp.items.map((k, i) => `<button data-i="${i}" ${mine && k !== 'amulet' ? '' : 'disabled'} title="${ITEMS[k].desc}">${ITEMS[k].icon} ${ITEMS[k].name}<small> ${ITEMS[k].desc}</small></button>`).join('');
-  $('#route').innerHTML = G.choice ? G.choice.opts.map((o, i) => `<button class="rt" data-i="${i}" ${own ? '' : 'disabled'}>${o}</button>`).join('') : '';
+  $('#items').innerHTML = cp.items.map((k, i) => `<button data-i="${i}" ${mine && !cp.muted && !['amulet', 'guard', 'scope'].includes(k) ? '' : 'disabled'} title="${ITEMS[k].desc}">${ITEMS[k].icon} ${ITEMS[k].name}<small> ${ITEMS[k].desc}</small></button>`).join('');
+  renderAsk(); renderMission();
   updateBtn(); Net.sync();
 }
 const clampTurns = v => Math.max(5, Math.min(99, parseInt(v) || DEFAULT_TURNS));
 const turnsHtml = `<label class="tn">ターン数（メインステージ） <input id="tn" class="nm" type="number" min="5" max="99" value="${DEFAULT_TURNS}"> ターン</label>
-  <label class="tn chk"><input type="checkbox" id="fog"> 🌫️ 霧モード（マスの一部が見えない。誰かが止まると公開）</label>`;
+  <label class="tn chk"><input type="checkbox" id="fog"> 🌫️ 霧モード（マスの一部が見えない。誰かが止まると公開）</label>
+  <label class="tn">初期所持金 <select id="rmoney" class="nm"><option value="1000000">100万円</option><option value="3000000" selected>300万円</option><option value="5000000">500万円</option><option value="10000000">1000万円</option></select></label>
+  <label class="tn chk"><input type="checkbox" id="rbattle" checked> ⚔️ 対戦・妨害あり（対戦マス・略奪・同盟・泥棒などのアイテム）</label>
+  <label class="tn chk"><input type="checkbox" id="revents" checked> 🌐 全体イベントあり（Vketシーズンなど）</label>
+  <label class="tn chk"><input type="checkbox" id="rmission" checked> 🎴 隠しミッションあり</label>`;
+const readRules = () => ({ fog: $('#fog').checked, money: +$('#rmoney').value || START_MONEY, battle: $('#rbattle').checked, events: $('#revents').checked, missions: $('#rmission').checked });
 
 // 名前は N(p) の目印で文章に埋め込み、表示時に「プレイヤー色のバッジ」(ログ) / 通常の文字(メッセージ) に変換する
 const N = p => `\u0001${G.ps.indexOf(p)}\u0002`;
@@ -229,10 +245,10 @@ const _head = (t, ty) => {
   $('#evh').textContent = fmt(t, false);
   const e = $('#event'); if (e.dataset) e.dataset.ty = ty || '';
   $('#evicon').textContent = ty && TYPES[ty] ? TYPES[ty].icon : '';
-  if (ty) _restart(e, 'pop');
+  if (ty) { _restart(e, 'pop'); _sfx(ty === 'duel' ? 'duel' : 'land'); bgmOverride = ty === 'duel' ? 'battle' : null; }
 };
 const head = (t, ty) => { _head(t, ty); Net.bc({ k: 'head', v: t, ty }); };
-const _sign = k => { const e = $('#event'); if (e && e.classList && e.classList.remove) e.classList.remove('plus', 'minus'); _restart(e, k); };
+const _sign = k => { _sfx(k === 'plus' ? 'plus' : 'minus'); const e = $('#event'); if (e && e.classList && e.classList.remove) e.classList.remove('plus', 'minus'); _restart(e, k); };
 const fx = k => { if (!k) return; _sign(k); Net.bc({ k: 'fx', v: k }); };
 const _hold = ms => { const b = $('#evbar i'); if (!b || !b.style) return; b.style.animation = 'none'; void b.offsetWidth; b.style.animation = `evbar ${ms}ms linear forwards`; };
 const hold = ms => { _hold(ms); Net.bc({ k: 'hold', ms }); };
@@ -265,4 +281,66 @@ function openProfile() {
   $('#psave').onclick = () => { d.close(); applyProfile(cleanProfile({ name: d.querySelector('.nm').value.trim(), img, color: cc.get() }, me.name)); };
   d.showModal();
 }
-window.VER_UI = '2026.10.22-c';
+window.VER_UI = '2026.10.24-e';
+
+// ===== クイズ：問題の登録エディタ（ロビー/設定画面） =====
+let _qid = 0;
+function qEditor(host, onChange) {
+  const uid = ++_qid; let qs = [];
+  const blank = t => ({ t, text: '', choices: ['', '', '', ''], ans: t === 'mc' ? 0 : null });
+  const clean = () => qs.map(q => {
+    const text = q.text.trim().slice(0, 60); if (!text) return null;
+    if (q.t === 'num') return Number.isFinite(q.ans) ? { t: 'num', text, ans: q.ans } : null;
+    const idx = []; q.choices.forEach((c, k) => { if (c.trim()) idx.push(k); });
+    if (idx.length < 2 || !idx.includes(q.ans)) return null;
+    return { t: 'mc', text, choices: idx.map(k => q.choices[k].trim().slice(0, 24)), ans: idx.indexOf(q.ans) };
+  }).filter(Boolean);
+  const count = () => { const d = host.closest('details'), n = d && d.querySelector('.qn'); if (n) n.textContent = ` （有効 ${clean().length}問）`; };
+  const changed = () => { count(); if (onChange) onChange(); };
+  const render = () => {
+    host.innerHTML = '<p class="note">問題は出題者本人は回答できません。正解者が賞金をもらい、全員不正解なら出題者にボーナスが入ります。未入力・選択肢2個未満・正解未選択の問題は無効です。</p>'
+      + qs.map((q, i) => `<div class="qf" data-i="${i}"><div class="qrow"><select class="qty"><option value="mc"${q.t === 'mc' ? ' selected' : ''}>4択（選択式）</option><option value="num"${q.t === 'num' ? ' selected' : ''}>数当て（一番近い人が勝ち）</option></select><button type="button" class="qdel">削除</button></div>
+        <input class="nm qtx" maxlength="60" placeholder="問題文" value="${esc(q.text)}">
+        ${q.t === 'mc' ? q.choices.map((c, k) => `<label class="qc"><input type="radio" name="qa${uid}_${i}" class="qa" value="${k}"${q.ans === k ? ' checked' : ''}><input class="nm qchx" data-k="${k}" maxlength="24" placeholder="選択肢${'ABCD'[k]}${k < 2 ? '（必須）' : '（任意）'}" value="${esc(c)}"></label>`).join('') + '<small>○を押した選択肢が正解です</small>'
+          : `<input class="nm qnn" type="number" placeholder="正解の数字" value="${q.ans === null ? '' : q.ans}">`}</div>`).join('')
+      + (qs.length < QMAX ? '<button type="button" class="qadd">＋問題を追加</button>' : '');
+    host.querySelectorAll('.qf').forEach(f => {
+      const i = +f.dataset.i, q = qs[i];
+      f.querySelector('.qty').onchange = e => { qs[i] = { ...blank(e.target.value), text: q.text }; render(); changed(); };
+      f.querySelector('.qdel').onclick = () => { qs.splice(i, 1); render(); changed(); };
+      f.querySelector('.qtx').oninput = e => { q.text = e.target.value; changed(); };
+      f.querySelectorAll('.qchx').forEach(x => x.oninput = e => { q.choices[+x.dataset.k] = e.target.value; changed(); });
+      f.querySelectorAll('.qa').forEach(x => x.onchange = () => { q.ans = +x.value; changed(); });
+      const nn = f.querySelector('.qnn'); if (nn) nn.oninput = e => { q.ans = e.target.value === '' ? null : parseFloat(e.target.value); changed(); };
+    });
+    const add = host.querySelector('.qadd'); if (add) add.onclick = () => { qs.push(blank('mc')); render(); changed(); };
+  };
+  render(); count();
+  return { get: clean };
+}
+
+// ===== クイズ：回答パネル =====
+function quizSeat() { return Net.on ? Net.seat : (G.quiz ? G.quiz.cur : -1); }
+function renderQuiz() {
+  const el = $('#quiz'), q = G.quiz; if (!el) return;
+  if (!q) { if (el._sig !== '') { el.hidden = true; el.innerHTML = ''; el._sig = ''; } return; }
+  const seat = quizSeat(), can = q.phase === 'ask' && seat >= 0 && seat !== q.author && !q.answered.includes(seat);
+  const tl = q.phase === 'ask' ? `⏱ ${q.left}秒` : '結果発表';
+  const sig = JSON.stringify([q.phase, q.text, q.answered, can, q.cur, q.reveal ? 1 : 0]);
+  if (el._sig === sig) { const t = $('#qleft'); if (t) t.textContent = tl; return; } // タイマーだけ更新（入力中の数字を消さない）
+  el._sig = sig; el.hidden = false;
+  const who = s => fmt(`\u0001${s}\u0002`, true);
+  let h = `<div class="qh"><span>❓ ${who(q.author)} さんの問題</span><b id="qleft">${tl}</b></div><div class="qtext">${esc(q.text)}</div>`;
+  if (q.phase === 'ask') {
+    if (!Net.on && q.cur != null) h += `<div class="qwho">今の回答者：${who(q.cur)}（他の人は画面を見ないでね）</div>`;
+    h += q.type === 'mc'
+      ? `<div class="qchs">${q.choices.map((c, i) => `<button data-a="${i}" ${can ? '' : 'disabled'}>${'ABCD'[i]}. ${esc(c)}</button>`).join('')}</div>`
+      : `<div class="qnum"><input type="number" id="qin" ${can ? '' : 'disabled'} placeholder="数字を予想"><button id="qgo" ${can ? '' : 'disabled'}>回答</button></div>`;
+    const note = Net.on && seat === q.author ? 'あなたの問題です。回答はみんなに任せよう' : (q.answered.includes(seat) ? '回答済み！みんなを待っています' : '');
+    h += `<div class="qst">${note}<br>回答済み：${q.answered.length ? q.answered.map(who).join(' ') : 'まだ誰も'}</div>`;
+  } else {
+    const r = q.reveal;
+    h += `<div class="qans">正解：<b>${esc(r.correct)}</b></div><ul class="qres">${r.rows.map(x => `<li>${who(x.seat)} ${esc(x.pick)} ${x.win ? '✅' : '❌'}${x.note ? ` <small>${esc(x.note)}</small>` : ''}</li>`).join('')}</ul><div class="qst">${esc(r.summary)}</div>`;
+  }
+  el.innerHTML = h;
+}
